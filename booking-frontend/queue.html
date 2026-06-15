@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Provider Verification Queue - Service Square Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-container": "#a44100",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed": "#001f26",
+              "surface-container-low": "#f3f4f5",
+              "primary-fixed": "#e2dfff",
+              "primary": "#3525cd",
+              "on-secondary": "#ffffff",
+              "primary-fixed-dim": "#c3c0ff",
+              "on-primary-fixed": "#0f0069",
+              "secondary": "#00687a",
+              "on-secondary-fixed-variant": "#004e5c",
+              "surface-container": "#edeeef",
+              "on-secondary-container": "#006172",
+              "surface": "#f8f9fa",
+              "on-primary": "#ffffff",
+              "on-tertiary-fixed": "#351000",
+              "tertiary-fixed-dim": "#ffb695",
+              "surface-container-highest": "#e1e3e4",
+              "surface-tint": "#4d44e3",
+              "on-tertiary": "#ffffff",
+              "on-surface": "#191c1d",
+              "on-error-container": "#93000a",
+              "outline-variant": "#c7c4d8",
+              "on-tertiary-container": "#ffd2be",
+              "on-error": "#ffffff",
+              "tertiary-fixed": "#ffdbcc",
+              "error-container": "#ffdad6",
+              "outline": "#777587",
+              "on-tertiary-fixed-variant": "#7b2f00",
+              "inverse-primary": "#c3c0ff",
+              "background": "#f8f9fa",
+              "error": "#ba1a1a",
+              "on-background": "#191c1d",
+              "tertiary": "#7e3000",
+              "secondary-container": "#57dffe",
+              "on-surface-variant": "#464555",
+              "inverse-surface": "#2e3132",
+              "surface-container-high": "#e7e8e9",
+              "surface-dim": "#d9dadb",
+              "primary-container": "#4f46e5",
+              "on-primary-container": "#dad7ff",
+              "secondary-fixed-dim": "#4cd7f6",
+              "surface-bright": "#f8f9fa",
+              "surface-variant": "#e1e3e4",
+              "inverse-on-surface": "#f0f1f2",
+              "secondary-fixed": "#acedff",
+              "on-primary-fixed-variant": "#3323cc"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .tonal-shift-no-borders {
+        border-right: none !important;
+      }
+      .scale-98-on-click:active {
+        transform: scale(0.98);
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-50 dark:bg-slate-950 flex flex-col h-full p-4 gap-2 z-50">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-indigo-600 dark:text-indigo-400 leading-none">Service Square</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mt-1">Admin Console</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium tracking-wide">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm rounded-xl hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<span class="text-sm font-medium tracking-wide">Provider Verification</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium tracking-wide">User Management</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-sm font-medium tracking-wide">Bookings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-medium tracking-wide">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium tracking-wide">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-4">
+<button class="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-200/50 rounded-xl transition-all">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-sm font-medium">Logout</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen p-8">
+<!-- Top Bar -->
+<header class="flex justify-between items-center mb-10">
+<div>
+<h2 class="text-3xl font-black tracking-tight text-on-surface">Provider Verification</h2>
+<p class="text-on-surface-variant mt-1">Review and manage professional service applications.</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline">search</span>
+<input class="pl-10 pr-4 py-2.5 bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-primary-fixed focus:bg-surface-container-lowest transition-all w-64 text-sm" placeholder="Search providers..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl font-semibold shadow-lg shadow-primary/20 scale-98-on-click transition-all">
+<span class="material-symbols-outlined text-sm">download</span>
+                    Export Report
+                </button>
+</div>
+</header>
+<!-- Bento Grid Summary Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg">list_alt</span>
+<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">+12%</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-sm font-medium">Total Applications</p>
+<h3 class="text-2xl font-black text-on-surface">1,284</h3>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg">pending_actions</span>
+<span class="text-xs font-bold text-tertiary bg-tertiary-fixed px-2 py-0.5 rounded-full">Action Required</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-sm font-medium">Pending Review</p>
+<h3 class="text-2xl font-black text-on-surface">43</h3>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-secondary bg-secondary-container p-2 rounded-lg">verified</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-sm font-medium">Approved Today</p>
+<h3 class="text-2xl font-black text-on-surface">18</h3>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-error bg-error-container p-2 rounded-lg">block</span>
+</div>
+<div>
+<p class="text-on-surface-variant text-sm font-medium">Rejected</p>
+<h3 class="text-2xl font-black text-on-surface">7</h3>
+</div>
+</div>
+</div>
+<!-- Verification Table Section -->
+<section class="bg-surface-container-lowest rounded-xl overflow-hidden">
+<div class="px-8 py-6 flex items-center justify-between border-b border-surface-container">
+<h4 class="font-bold text-lg">Active Verification Queue</h4>
+<div class="flex gap-2">
+<button class="px-4 py-2 text-sm font-semibold bg-surface-container-low rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">All Categories</button>
+<button class="px-4 py-2 text-sm font-semibold bg-surface-container-low rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">Newest First</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="text-on-surface-variant text-xs uppercase tracking-widest font-bold">
+<th class="px-8 py-5">Provider Name</th>
+<th class="px-8 py-5">Category</th>
+<th class="px-8 py-5">Registration Date</th>
+<th class="px-8 py-5">Verification Status</th>
+<th class="px-8 py-5 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Professional headshot of a service provider" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2xDNasi_Oe4kp32YRb5hR-h544K5-UEzOPVLhjtdwYlXM19UsnjDTrkKKXLbX6WsYbV2DqrtNVd_f25iS1YUS6xC9yXHDPEVVX6rX1A4oGEpk0Vfm5bMpWLtFF75ag4NOqg25_GrsXnn2hY6AxZdV23P5RP3-ZPJ0CXLyUgyfmORiIEEaZOqf5ULYC5Tc5BTN-kiPSLSl45sOvMkaqfzcwPQHQGt4W6K_XMholgmGmG_gpYUbujkxUAe8hf8OrQHGgFns0YshjXo"/>
+<div>
+<p class="font-bold text-on-surface">Alex Rivera</p>
+<p class="text-xs text-on-surface-variant">alex.r@profix.com</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+<span class="text-sm font-medium">Home Maintenance</span>
+</span>
+</td>
+<td class="px-8 py-5 text-sm text-on-surface-variant">Oct 24, 2023</td>
+<td class="px-8 py-5">
+<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
+                                    Pending
+                                </span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors scale-98-on-click">View Details</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Headshot of female cleaning professional" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS4_UOl1Us4GOcNL87LqiInKiVik-c4XBCkTLZpoYmYWtKjA113FB_LG__WcgsNvVZStOCLTJ8pZXbR5toQpFHc1nsXzfQHrgbC9ZXrqQGUDaUB5wLMTF08oprqa6l8VTHo7g-rnbmirqVsC8O1Nb3N2l5CJ6vEYRO5q__eQrwzOg7y2WmOKVE_J3IR5fynEnOtSgisAwVle1rQxVkBZPrU9wK7jd65RvcOgr4xVerGrucLdC4ihzJIPoy9AdcHBqN4cse-jzD69c"/>
+<div>
+<p class="font-bold text-on-surface">Sarah Jenkins</p>
+<p class="text-xs text-on-surface-variant">sarah.j@sparkle.co</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-sm font-medium">Cleaning Services</span>
+</span>
+</td>
+<td class="px-8 py-5 text-sm text-on-surface-variant">Oct 23, 2023</td>
+<td class="px-8 py-5">
+<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
+                                    Pending
+                                </span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors scale-98-on-click">View Details</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Headshot of male electrician" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhyVhbGZ3GzgUuwEFy-M_puWzIJpgV0B6jQAeFjlGSRyIfkECH0f-0XjgXVk0p8E1W36wg5-YoDNySnnuAdTFQfi-54BaWbS38woW1jJ0akD-ybQ8CbowEX_AIpN9egj3Oep7TgqtszfnzcxiXgX4qA9CMdXX8XgWs5HPgObAD2ByW83FcZkzJvxisKZgJ4zhHJN79Hv4uUa6IcKN9zmflqpgkz9Tw_W6lLH-WNLvD9-kwxkgLIly9BKPI2b_slwCeiIYuSuGWjCQ"/>
+<div>
+<p class="font-bold text-on-surface">Michael Chen</p>
+<p class="text-xs text-on-surface-variant">m.chen@voltwise.io</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-sm font-medium">Electrical</span>
+</span>
+</td>
+<td class="px-8 py-5 text-sm text-on-surface-variant">Oct 22, 2023</td>
+<td class="px-8 py-5">
+<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
+                                    Pending
+                                </span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors scale-98-on-click">View Details</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Headshot of female landscape architect" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRHD601S7XRxp1GCebYOKfB9m2QBO_F-bVFwUUTBbm8pt-_FC3WfyqUp8kfhTMYZw1G4zfajkrrPxFjo0sxRtEbXw_qNzeljm6-pYlp-PaziAnCkmfp1L1ta6ZjynVnsGICeGN8gyzDR1riUI8Yqh64_7tqv-3yNMBkh6q3KB_AK4Fqs94uksKVR3OwDVxnXIQpNAYSc9NEL8AYJZhQOhZTQq07WkpCB1kNgcVhRYGOkC5oRojfO7ekyAhvkIobR2RnaJRygTaxOg"/>
+<div>
+<p class="font-bold text-on-surface">Elena Rodriguez</p>
+<p class="text-xs text-on-surface-variant">e.rod@greenery.net</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-sm font-medium">Landscaping</span>
+</span>
+</td>
+<td class="px-8 py-5 text-sm text-on-surface-variant">Oct 21, 2023</td>
+<td class="px-8 py-5">
+<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
+                                    Pending
+                                </span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors scale-98-on-click">View Details</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-8 py-6 flex items-center justify-between border-t border-surface-container text-sm text-on-surface-variant">
+<p>Showing 1 to 4 of 43 pending applications</p>
+<div class="flex gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors font-medium">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors font-medium">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Contextual FAB (Only for main action areas) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined">add</span>
+</button>
+</body></html>
