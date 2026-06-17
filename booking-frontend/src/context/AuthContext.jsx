@@ -1,58 +1,112 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
+import apiClient from '../services/apiClient';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // MOCK_MODE: Set to true for development testing
-  const MOCK_MODE = true;
-  
-  // Default to LOGGED OUT
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Optionally load from localStorage here if we were persisting mock state
-    const savedUser = localStorage.getItem('mockUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      setIsAuthenticated(true);
+  // Function to load the user profile from the token
+  const loadProfile = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiClient.get('/auth/profile');
+      if (response.data && response.data.success) {
+        setUser(response.data.data.user);
+        setIsAuthenticated(true);
+      } else {
+        throw new Error('Failed to load profile');
+      }
+    } catch (error) {
+      console.error("Profile load failed:", error);
+      logout(); // clear invalid token
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  const login = (role) => {
-    if (!MOCK_MODE) return; // Prevent real API bypass in prod
-    
-    let mockUser = null;
-    switch(role) {
-      case 'Customer':
-        mockUser = { id: 1, name: 'John Doe', role: 'Customer', email: 'customer@test.com' };
-        break;
-      case 'Provider':
-        mockUser = { id: 2, name: 'Service Pro', role: 'Provider', email: 'provider@test.com' };
-        break;
-      case 'Admin':
-        mockUser = { id: 3, name: 'Admin', role: 'Admin', email: 'admin@test.com' };
-        break;
-      default:
-        mockUser = null;
-    }
-    
-    if (mockUser) {
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      localStorage.setItem('mockUser', JSON.stringify(mockUser));
-    }
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const sendOtp = async (phone) => {
+    const response = await apiClient.post('/auth/send-otp', { phone });
+    return response.data;
   };
 
-  const logout = () => {
+  const verifyOtp = async (phone, otp) => {
+    const response = await apiClient.post('/auth/verify-otp', { phone, otp });
+    const { token, refreshToken, user: userData, requiresRegistration } = response.data.data;
+    
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    
+    // Only fully authenticate if registration is not required
+    if (!requiresRegistration && userData) {
+      setUser(userData);
+      setIsAuthenticated(true);
+    }
+    
+    return response.data;
+  };
+
+  const register = async (userData) => {
+    const response = await apiClient.post('/auth/register', userData);
+    const { token, refreshToken, user: newUserData } = response.data.data;
+    
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    
+    setUser(newUserData);
+    setIsAuthenticated(true);
+    
+    return response.data;
+  };
+
+  const logout = async () => {
+    try {
+      const refreshTokenValue = localStorage.getItem('refreshToken');
+      // If backend requires refresh token for logout, pass it
+      if (refreshTokenValue) {
+         await apiClient.post('/auth/logout', { refreshToken: refreshTokenValue });
+      }
+    } catch (error) {
+      console.error("Logout API failed, continuing local logout", error);
+    }
+    
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('mockUser');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, MOCK_MODE }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, sendOtp, verifyOtp, register, logout, loadProfile }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

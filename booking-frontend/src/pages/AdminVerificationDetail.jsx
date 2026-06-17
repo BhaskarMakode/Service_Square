@@ -1,7 +1,83 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import apiClient from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminVerificationDetail() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    
+    const [provider, setProvider] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [rejectionReason, setRejectionReason] = useState('');
+
+    const queryParams = new URLSearchParams(location.search);
+    const providerId = queryParams.get('id');
+
+    useEffect(() => {
+        if (!user || user.role !== 'admin') {
+            navigate('/');
+            return;
+        }
+        if (!providerId) {
+            navigate('/admin-verification-queue');
+            return;
+        }
+        fetchProviderDetails();
+    }, [user, navigate, providerId]);
+
+    const fetchProviderDetails = async () => {
+        try {
+            setLoading(true);
+            const res = await apiClient.get(`/providers/${providerId}`);
+            if (res.data.success) {
+                setProvider(res.data.data.provider);
+            }
+        } catch (err) {
+            setError(err.message || 'Failed to fetch provider details');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAction = async (status) => {
+        if (status === 'rejected' && !rejectionReason.trim()) {
+            alert("Please provide a rejection reason.");
+            return;
+        }
+        try {
+            setLoading(true);
+            const res = await apiClient.put(`/admin/provider/${providerId}/verify`, {
+                status,
+                rejectionReason: status === 'rejected' ? rejectionReason : undefined
+            });
+            if (res.data.success) {
+                navigate('/admin-verification-queue');
+            }
+        } catch (err) {
+            alert(err.message || `Failed to ${status} provider`);
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center text-slate-500 font-bold animate-pulse">Loading Provider Details...</div>;
+    }
+
+    if (error || !provider) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center">
+                <p className="text-red-500 font-bold mb-4">{error || 'Provider not found'}</p>
+                <Link to="/admin-verification-queue" className="px-4 py-2 bg-indigo-600 text-white rounded-xl">Back to Queue</Link>
+            </div>
+        );
+    }
+
+    const u = provider.userId || {};
+    const cat = provider.categoryId || {};
+
     return (
         <div className="bg-surface text-on-surface font-body antialiased min-h-screen flex">
             {/* Sidebar Navigation */}
@@ -16,7 +92,7 @@ export default function AdminVerificationDetail() {
                     </div>
                 </Link>
                 <nav className="flex-1 space-y-1">
-                    <Link className="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-all duration-200 hover:translate-x-1 group" to="/admin-verification-queue">
+                    <Link className="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-all duration-200 hover:translate-x-1 group" to="/admin-dashboard">
                         <span className="material-symbols-outlined text-xl">dashboard</span>
                         <span className="text-sm font-medium tracking-wide">Overview</span>
                     </Link>
@@ -62,19 +138,19 @@ export default function AdminVerificationDetail() {
                         </Link>
                         <div>
                             <h2 className="text-xl font-bold text-on-surface tracking-tight">Provider Verification</h2>
-                            <p className="text-sm text-on-surface-variant">Application ID: #APP-882190-24</p>
+                            <p className="text-sm text-on-surface-variant">Application ID: #{provider._id.slice(-8)}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-full text-xs font-bold flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
-                            Pending Review
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${provider.verificationStatus === 'pending' ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant' : (provider.verificationStatus === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${provider.verificationStatus === 'pending' ? 'bg-tertiary' : (provider.verificationStatus === 'approved' ? 'bg-emerald-500' : 'bg-red-500')}`}></span>
+                            {provider.verificationStatus}
                         </div>
                         <button className="p-2 text-on-surface-variant hover:bg-surface-container rounded-full">
                             <span className="material-symbols-outlined">notifications</span>
                         </button>
                         <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
-                            <img alt="Admin" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYUEUaDiLYEPaWNCE2vGsjGGL-5ATWUN2XPhKE9NGZFc48xwd2Ckztcsr-4gzz9KWZgdHZeXvhLICdsPrvdC9D6tj3wVpMDwUAu-bOZFgsUWFaw6c5vmCAv7rHSJ13AD3vH37rMA6mkpeIltuC9xDySouiJkRLMpEb5bLQnl4aYOxv8Iw7hpyZXPd3LTwQ51v-NGJOuQbka2ESNVrcMnP05H6ef1b9O6WjV7TGz8zasoZkkYkbmvNaSgdZoDsOn2W6-mV8TfjnYBA" />
+                            <img alt="Admin" className="w-full h-full object-cover" src={user?.avatar || "https://ui-avatars.com/api/?name=Admin&background=4F46E5&color=fff"} />
                         </div>
                     </div>
                 </header>
@@ -87,32 +163,32 @@ export default function AdminVerificationDetail() {
                             {/* Hero Card */}
                             <div className="col-span-12 lg:col-span-7 bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-outline-variant/5 flex items-start gap-6">
                                 <div className="relative">
-                                    <img className="w-32 h-32 rounded-2xl object-cover shadow-md" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeW5gdLhoq3qpyi_iBU116YJtC0_fH_Mk-LPey5-K2r9EZ31CpA_1QfTj_Z9XrNOzABI8ZGoFGv6SsCWvw0mQnsR-0wOdbD9ui5IYftH4XR-AcnmVKCLTAPEPZun4_lrqicGVgLO1i0EJfKPZEPEmgltoqHX8oxugZFp-foeLXgPyJJm3sCm9AiPxj6PaoWHSnbUU6xhBWXc0O5VTMJYA3J8lcCj14magXnZ3GT-jdZaEIB_3pWTnQ_DggaPpLwot2admSziVtQfc" alt="Provider" />
+                                    <img className="w-32 h-32 rounded-2xl object-cover shadow-md bg-indigo-100" src={u.avatar || `https://ui-avatars.com/api/?name=${u.name || 'Provider'}&background=4F46E5&color=fff`} alt="Provider" />
                                     <div className="absolute -top-3 -right-3 bg-white/40 backdrop-blur-xl border border-white/40 p-2 rounded-xl shadow-lg">
                                         <div className="bg-secondary-container p-1 rounded-lg">
-                                            <span className="material-symbols-outlined text-on-secondary-container text-lg">plumbing</span>
+                                            <span className="material-symbols-outlined text-on-secondary-container text-lg">{cat.icon || 'plumbing'}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-2xl font-bold tracking-tight text-on-surface">Julian Alexander</h3>
-                                    <p className="text-on-surface-variant font-medium">Professional Plumbing Expert</p>
+                                    <h3 className="text-2xl font-bold tracking-tight text-on-surface capitalize">{u.name || 'Unknown'}</h3>
+                                    <p className="text-on-surface-variant font-medium capitalize">Professional {cat.name || provider.category || 'Service'} Expert</p>
                                     <div className="mt-4 grid grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-[10px] uppercase tracking-widest text-outline font-bold">Location</p>
-                                            <p className="text-sm font-semibold">Brooklyn, NY</p>
+                                            <p className="text-sm font-semibold">{provider.location?.city || 'Not Provided'}</p>
                                         </div>
                                         <div>
                                             <p className="text-[10px] uppercase tracking-widest text-outline font-bold">Member Since</p>
-                                            <p className="text-sm font-semibold">Oct 12, 2023</p>
+                                            <p className="text-sm font-semibold">{new Date(provider.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                                         </div>
                                         <div>
                                             <p className="text-[10px] uppercase tracking-widest text-outline font-bold">Email</p>
-                                            <p className="text-sm font-semibold truncate">j.alex@example.com</p>
+                                            <p className="text-sm font-semibold truncate">{u.email}</p>
                                         </div>
                                         <div>
                                             <p className="text-[10px] uppercase tracking-widest text-outline font-bold">Phone</p>
-                                            <p className="text-sm font-semibold">+1 202-555-0143</p>
+                                            <p className="text-sm font-semibold">{u.phone || 'N/A'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -126,100 +202,40 @@ export default function AdminVerificationDetail() {
                                 <div className="space-y-4">
                                     <div className="bg-surface-container-lowest p-3 rounded-2xl flex items-center justify-between">
                                         <span className="text-sm font-medium text-on-surface-variant">Years of Practice</span>
-                                        <span className="text-sm font-bold text-primary">8+ Years</span>
+                                        <span className="text-sm font-bold text-primary">{provider.experience || 0}+ Years</span>
                                     </div>
                                     <div className="bg-surface-container-lowest p-3 rounded-2xl flex items-center justify-between">
                                         <span className="text-sm font-medium text-on-surface-variant">Specialization</span>
-                                        <span className="text-sm font-bold text-primary">Master Plumber</span>
+                                        <span className="text-sm font-bold text-primary capitalize">{cat.name || provider.category || 'N/A'}</span>
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold text-outline mb-2">Primary Services</p>
                                         <div className="flex flex-wrap gap-2">
-                                            <span className="px-3 py-1 bg-white dark:bg-slate-800 dark:border-slate-700 rounded-full text-[11px] font-bold border border-outline-variant/20 shadow-sm text-on-surface">Leak Repair</span>
-                                            <span className="px-3 py-1 bg-white dark:bg-slate-800 dark:border-slate-700 rounded-full text-[11px] font-bold border border-outline-variant/20 shadow-sm text-on-surface">Pipe Install</span>
-                                            <span className="px-3 py-1 bg-white dark:bg-slate-800 dark:border-slate-700 rounded-full text-[11px] font-bold border border-outline-variant/20 shadow-sm text-on-surface">Gas Fitting</span>
+                                            {provider.skills?.map((skill, idx) => (
+                                              <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-800 dark:border-slate-700 rounded-full text-[11px] font-bold border border-outline-variant/20 shadow-sm text-on-surface">{skill}</span>
+                                            ))}
+                                            {(!provider.skills || provider.skills.length === 0) && (
+                                              <span className="text-xs text-on-surface-variant italic">No specific skills listed.</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Documents Section */}
+                        {/* Documents Section (Mock) */}
                         <section>
                             <div className="flex items-center justify-between mb-4">
                                 <h4 className="text-lg font-bold text-on-surface tracking-tight">Verification Documents</h4>
-                                <button className="text-xs font-bold text-primary flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-sm">visibility</span>
-                                    View All (4)
-                                </button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {/* ID Document */}
                                 <div className="group relative overflow-hidden rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-sm">
-                                    <div className="h-40 bg-surface-container-highest relative">
-                                        <img className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500 opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlaPVwVaUGgXK8pomF6Uqo3bFzakS89b3Th30Mb_ELT3px4CIba6RMNelLK2CiGHAu9zr55t1y2imhj5ZXgl0SvK-cPBGvr3UBYFBgUyC_eiQMZQm50yYz5B3svf7jzJZ41kByRXMZ9zaoGbzJAZ2js-qeYShmNVVyylX8M7Wzhlq7M_vejbjapzVRp_srThBG9k2mUNS1BpbjpFspEl41QgnavkQLuAy15zN9nZPqQ9fKiMFeGmCULZHxapqVHdhj2DrWmRvXdt0" alt="Identity Doc" />
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-4xl text-outline-variant">lock</span>
-                                        </div>
+                                    <div className="h-40 bg-surface-container-highest relative flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-4xl text-outline-variant">id_card</span>
                                     </div>
                                     <div className="p-4">
                                         <p className="text-sm font-bold text-on-surface">Government Photo ID</p>
-                                        <p className="text-xs text-on-surface-variant">Verified by AI Engine</p>
-                                    </div>
-                                </div>
-                                {/* Certification */}
-                                <div className="group relative overflow-hidden rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-sm cursor-pointer">
-                                    <div className="h-40 bg-surface-container-highest relative">
-                                        <img className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-X_e8PIFgwTxctUNDuP6brhLghzSJCdWaszSLr9TfUFZrxp4xr7q4Mr6X4ZHc7WCdFSD3jWlgn3GnNx_6aNHnFQJtKv7qtY1i1-C72wPgF2FIhQU1uH2WVTuA0JhUAgIg3MMN1NWvpGFrd7LVFywQvVEpvXEpGIuqT4cBD7x1oNKaNg8wyPiu7d05Kl-PmEr_nd_-GCrDFQlyTCuHwQVCM4fRZjSWo2TDw_Z9I704TizG7uNAYcvhop2lorUlwCei6O9IguLamTQ" alt="License Doc" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1 rounded-full border border-white/30 flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-sm">zoom_in</span>
-                                                Preview
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <p className="text-sm font-bold text-on-surface">Plumbing License #P-1120</p>
-                                        <p className="text-xs text-on-surface-variant">Expires Dec 2026</p>
-                                    </div>
-                                </div>
-                                {/* Insurance */}
-                                <div className="group relative overflow-hidden rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-sm cursor-pointer">
-                                    <div className="h-40 bg-surface-container-highest relative">
-                                        <img className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBpi5YDi-MzsPsQ8BDoNTgqex2OL10kN8fbKpklxKJUZF-K7Bg8Yug2x16lX0ahxjfYVYeS7cyoYCJRWR_RGR5i9QsZrwNoMViP8YG_WxFP3F_bCeTzVWB6mRRir70Jin1BPlcKZ3Dfl1er0bfYt5HldyMlPaE5ynltZ1-9GeXV73tEieF10S-hiYKbyz2c-kDOmhrTYAr33ne4QF12sji2NoBUd5KFrQNPX0KhN8zlg7Bnh50X4kaJoNg1_hL68fM0VbT7Ox85cs" alt="Insurance Doc" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1 rounded-full border border-white/30 flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-sm">zoom_in</span>
-                                                Preview
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <p className="text-sm font-bold text-on-surface">General Liability Ins.</p>
-                                        <p className="text-xs text-on-surface-variant">Coverage up to $1M</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                        {/* Location Map */}
-                        <section>
-                            <div className="flex items-center gap-2 mb-4">
-                                <span className="material-symbols-outlined text-primary">map</span>
-                                <h4 className="text-lg font-bold text-on-surface tracking-tight">Service Radius</h4>
-                            </div>
-                            <div className="h-[300px] w-full bg-surface-container rounded-[2rem] overflow-hidden border border-outline-variant/20 relative shadow-inner">
-                                <img className="w-full h-full object-cover grayscale opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXl-EtxmzONfbO0hTCNeRfB2kJ-2asfJrmud0y_pyYCXEdBrZupYQGBQtFHdo89c7bsJrS8Y5kO3nNppj1ayN1WC8li0u8l7QXavTz2-D4Cg4R4aExe32al1G-dv-M-A4h3WU-kIOMFDPWT7b_KWIgEFCDF93rwTE6tTe3Ye_jpnQw8oGtA9EP2YyIVyVhcrrVfBxjgx0mBcgAK4Ysfer1MJU0wLSxNsWm0MAfP8PY7uMd-JWZOc47N-po8fhDsj6Pb9CPS00JgvY" alt="Map" />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-48 h-48 rounded-full border-4 border-primary/20 bg-primary/10 flex items-center justify-center animate-pulse">
-                                        <div className="w-4 h-4 bg-primary rounded-full shadow-[0_0_15px_rgba(53,37,205,0.5)]"></div>
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl shadow-lg flex items-center gap-3 border border-white/20">
-                                    <div className="bg-primary/10 p-2 rounded-xl">
-                                        <span className="material-symbols-outlined text-primary">location_on</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-on-surface">15-mile radius</p>
-                                        <p className="text-[10px] text-on-surface-variant font-medium">Brooklyn &amp; Queens area</p>
+                                        <p className="text-xs text-on-surface-variant">Uploaded by provider</p>
                                     </div>
                                 </div>
                             </div>
@@ -234,41 +250,38 @@ export default function AdminVerificationDetail() {
                             </div>
                             {/* Action Buttons */}
                             <div className="space-y-3">
-                                <Link to="/admin-verification-queue" className="w-full py-4 px-6 bg-gradient-to-br from-primary to-primary-container text-white rounded-2xl font-bold flex items-center justify-between group active:scale-95 transition-all shadow-md hover:brightness-110">
-                                    <span>Approve Provider</span>
+                                <button 
+                                    onClick={() => handleVerify('approved')}
+                                    disabled={actionLoading || provider?.verificationStatus === 'approved'}
+                                    className={`w-full py-4 px-6 ${provider?.verificationStatus === 'approved' ? 'bg-emerald-500' : 'bg-gradient-to-br from-primary to-primary-container'} text-white rounded-2xl font-bold flex items-center justify-between group active:scale-95 transition-all shadow-md hover:brightness-110 disabled:opacity-50`}
+                                >
+                                    <span>{provider?.verificationStatus === 'approved' ? 'Approved' : 'Approve Provider'}</span>
                                     <span className="material-symbols-outlined text-white/50 group-hover:text-white transition-colors">check_circle</span>
-                                </Link>
-                                <button className="w-full py-4 px-6 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-2xl font-bold flex items-center justify-between group active:scale-95 transition-all hover:brightness-105">
-                                    <span>Request Info</span>
-                                    <span className="material-symbols-outlined text-on-tertiary-fixed-variant/50 group-hover:text-on-tertiary-fixed-variant transition-colors">help_center</span>
                                 </button>
-                                <Link to="/admin-verification-queue" className="w-full py-4 px-6 bg-error-container text-on-error-container rounded-2xl font-bold flex items-center justify-between group active:scale-95 transition-all hover:brightness-105">
-                                    <span>Reject Application</span>
+                                <button 
+                                    onClick={() => handleVerify('rejected')}
+                                    disabled={actionLoading || provider?.verificationStatus === 'rejected'}
+                                    className={`w-full py-4 px-6 ${provider?.verificationStatus === 'rejected' ? 'bg-error text-white' : 'bg-error-container text-on-error-container'} rounded-2xl font-bold flex items-center justify-between group active:scale-95 transition-all hover:brightness-105 disabled:opacity-50`}
+                                >
+                                    <span>{provider?.verificationStatus === 'rejected' ? 'Rejected' : 'Reject Application'}</span>
                                     <span className="material-symbols-outlined text-on-error-container/50 group-hover:text-on-error-container transition-colors">cancel</span>
-                                </Link>
+                                </button>
                             </div>
                             {/* Rejection Reason */}
-                            <div className="pt-6 border-t border-outline-variant/10">
-                                <label className="block text-xs font-bold text-outline uppercase tracking-widest mb-2" htmlFor="rejection-reason">Internal Review Note</label>
-                                <textarea className="w-full bg-surface-container-high border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary-fixed focus:bg-white dark:focus:bg-slate-800 transition-all resize-none text-on-surface" id="rejection-reason" placeholder="Enter reason for rejection or details requested..." rows="4"></textarea>
-                            </div>
-                            {/* Quick Tools */}
-                            <div className="bg-surface-container-low rounded-2xl p-4">
-                                <p className="text-[10px] font-bold text-on-surface-variant uppercase mb-3">Auditor Metadata</p>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-on-surface-variant">Profile Score</span>
-                                        <span className="font-bold text-secondary">92% Match</span>
-                                    </div>
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-on-surface-variant">Duplicate Check</span>
-                                        <span className="font-bold text-secondary">No Conflicts</span>
-                                    </div>
-                                    <div className="w-full bg-outline-variant/20 h-1.5 rounded-full overflow-hidden mt-2">
-                                        <div className="bg-secondary h-full w-[92%] rounded-full"></div>
-                                    </div>
+                            {provider?.verificationStatus !== 'approved' && (
+                                <div className="pt-6 border-t border-outline-variant/10">
+                                    <label className="block text-xs font-bold text-outline uppercase tracking-widest mb-2" htmlFor="rejection-reason">Internal Review Note</label>
+                                    <textarea 
+                                        className="w-full bg-surface-container-high border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary-fixed focus:bg-white dark:focus:bg-slate-800 transition-all resize-none text-on-surface" 
+                                        id="rejection-reason" 
+                                        placeholder="Enter reason for rejection or details requested..." 
+                                        rows="4"
+                                        value={rejectionReason}
+                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                        disabled={provider?.verificationStatus === 'rejected'}
+                                    ></textarea>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </aside>
                 </div>

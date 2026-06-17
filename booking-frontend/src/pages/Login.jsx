@@ -1,13 +1,76 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Login() {
-  const [role, setRole] = useState('customer');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [devOtp, setDevOtp] = useState(null);
 
-  const roleTargets = {
-    customer: '/dashboard',
-    provider: '/provider-panel',
-    admin: '/admin-dashboard'
+  const { sendOtp, verifyOtp } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (!phone) {
+      setError("Please enter your phone number.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await sendOtp(phone);
+      if (res.success) {
+        setOtpSent(true);
+        // For development, pre-fill or log the OTP
+        if (res.data && res.data.devOtp) {
+           setDevOtp(res.data.devOtp);
+        }
+      } else {
+        setError(res.message || "Failed to send OTP.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "An error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (!otp) {
+      setError("Please enter the OTP.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await verifyOtp(phone, otp);
+      if (res.success) {
+        const { requiresRegistration, user } = res.data;
+        if (requiresRegistration) {
+          navigate('/signup', { state: { phone } });
+        } else {
+          // Redirect based on role
+          if (user.role === 'provider') {
+            navigate('/provider-panel');
+          } else if (user.role === 'admin') {
+            navigate('/admin-dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+        }
+      } else {
+        setError(res.message || "Failed to verify OTP.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Invalid OTP.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -18,63 +81,80 @@ export default function Login() {
              <span className="material-symbols-outlined text-indigo-600 dark:text-indigo-400" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
           </div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 mb-2 tracking-tight">Welcome Back</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Select your role to access your account</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Log in to your Service Square account</p>
         </div>
 
-        {/* Modern Role Selector */}
-        <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-8">
-          <button 
-            onClick={() => setRole('customer')}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${role === 'customer' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm scale-[1.02]' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-          >
-            <span className="material-symbols-outlined text-lg">person</span>
-            Customer
-          </button>
-          <button 
-            onClick={() => setRole('provider')}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${role === 'provider' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm scale-[1.02]' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-          >
-            <span className="material-symbols-outlined text-lg">engineering</span>
-            Provider
-          </button>
-          <button 
-            onClick={() => setRole('admin')}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${role === 'admin' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm scale-[1.02]' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-          >
-            <span className="material-symbols-outlined text-lg">admin_panel_settings</span>
-            Admin
-          </button>
-        </div>
-
-        <form className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">Email Address</label>
-            <input type="email" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="you@example.com" />
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium">
+            {error}
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">Password</label>
-            <input type="password" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="••••••••" />
+        )}
+        
+        {devOtp && !otpSent && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 rounded-xl text-sm font-medium">
+            Development OTP: {devOtp}
           </div>
-          
-          <div className="flex items-center justify-between pt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800" />
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Remember me</span>
-            </label>
-            <a href="#" className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:opacity-80">Forgot password?</a>
-          </div>
+        )}
 
-          <Link 
-            to={roleTargets[role]} 
-            className="block text-center w-full py-4 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl hover:shadow-xl active:scale-[0.98] transition-all shadow-lg shadow-indigo-600/20"
-          >
-            Sign In as {role.charAt(0).toUpperCase() + role.slice(1)}
-          </Link>
-        </form>
+        {!otpSent ? (
+          <form className="space-y-5" onSubmit={handleSendOtp}>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">Phone Number</label>
+              <input 
+                type="tel" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" 
+                placeholder="+919876543210" 
+              />
+            </div>
+            
+            <button 
+              type="submit"
+              disabled={loading}
+              className="block text-center w-full py-4 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl hover:shadow-xl active:scale-[0.98] transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-70"
+            >
+              {loading ? 'Sending...' : 'Send OTP'}
+            </button>
+          </form>
+        ) : (
+          <form className="space-y-5" onSubmit={handleVerifyOtp}>
+            {devOtp && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-xl mb-4 text-center">
+                Development Mode OTP: <strong>{devOtp}</strong>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">Enter OTP</label>
+              <input 
+                type="text" 
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-center tracking-widest text-lg font-bold" 
+                placeholder="000000" 
+                maxLength={6}
+              />
+            </div>
+            
+            <button 
+              type="submit"
+              disabled={loading}
+              className="block text-center w-full py-4 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl hover:shadow-xl active:scale-[0.98] transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-70"
+            >
+              {loading ? 'Verifying...' : 'Verify OTP & Login'}
+            </button>
 
-        <div className="mt-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-6">
-          Don't have an account? <Link to="/signup" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Sign up now</Link>
-        </div>
+            <div className="text-center mt-4">
+              <button 
+                type="button" 
+                onClick={() => { setOtpSent(false); setOtp(''); }} 
+                className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+              >
+                Change Phone Number
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </main>
   );

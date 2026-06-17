@@ -18,7 +18,7 @@ export const ToastProvider = ({ children }) => {
       {children}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map((toast) => (
-          <div key={toast.id} className={\p-3 rounded text-white \\}>
+          <div key={toast.id} className={`p-3 rounded text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
             {toast.message}
           </div>
         ))}

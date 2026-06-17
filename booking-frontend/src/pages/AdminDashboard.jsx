@@ -1,19 +1,60 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import apiClient from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminDashboard() {
-  const stats = [
-    { label: 'Total Users', value: '12,450', change: '+12%', icon: 'group', color: 'bg-indigo-50 text-indigo-600' },
-    { label: 'Active Providers', value: '1,840', change: '+5.4%', icon: 'engineering', color: 'bg-emerald-50 text-emerald-600' },
-    { label: 'Daily Revenue', value: '$42,300', change: '+23%', icon: 'payments', color: 'bg-amber-50 text-amber-600' },
-    { label: 'Pending Verifications', value: '45', change: '-2', icon: 'verified_user', color: 'bg-rose-50 text-rose-600' }
-  ];
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalProviders: 0,
+    activeBookings: 0,
+    totalRevenue: 0,
+    transactions: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      navigate('/');
+      return;
+    }
+    fetchDashboardStats();
+  }, [user, navigate]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get('/admin/dashboard');
+      if (res.data.success) {
+        setStats(res.data.data.stats);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const activities = [
     { type: 'booking', text: 'New Electrician booking in Bengaluru', time: '2 min ago' },
     { type: 'provider', text: 'Amit Sharma requested profile verification', time: '15 min ago' },
     { type: 'payment', text: 'Platform commission received: $45.00', time: '1 hour ago' },
     { type: 'report', text: 'New support ticket filed regarding refund', time: '3 hours ago' }
+  ];
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500 animate-pulse">Loading Admin Dashboard...</div>;
+  }
+
+  const statsCards = [
+    { label: 'Total Users', value: stats?.totalUsers || 0, change: '+12%', icon: 'group', color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' },
+    { label: 'Total Providers', value: stats?.totalProviders || 0, change: '+5.4%', icon: 'engineering', color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    { label: 'Total Revenue', value: `$${(stats?.totalRevenue || 0).toLocaleString()}`, change: '+23%', icon: 'payments', color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
+    { label: 'Active Bookings', value: stats?.activeBookings || 0, change: '+2', icon: 'bookmark_added', color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' }
   ];
 
   return (
@@ -64,23 +105,30 @@ export default function AdminDashboard() {
             <button className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-indigo-50 transition-colors">
               <span className="material-symbols-outlined">notifications</span>
             </button>
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-              <img src="https://ui-avatars.com/api/?name=Super+Admin&background=4F46E5&color=fff" className="w-9 h-9 rounded-full border-2 border-white shadow-sm" alt="Admin"/>
-              <span className="font-bold text-slate-800 dark:text-white text-sm">Root Admin</span>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-700">
+              <img src={user?.avatar || "https://ui-avatars.com/api/?name=Admin&background=4F46E5&color=fff"} className="w-9 h-9 rounded-full border-2 border-white dark:border-slate-800 shadow-sm" alt="Admin"/>
+              <span className="font-bold text-slate-800 dark:text-white text-sm capitalize">{user?.name || 'Root Admin'}</span>
             </div>
           </div>
         </header>
 
         <div className="p-8 max-w-7xl mx-auto space-y-8">
+          {error && (
+            <div className="p-4 bg-red-50 text-red-600 rounded-xl font-medium border border-red-100 flex items-center gap-2">
+              <span className="material-symbols-outlined">error</span>
+              {error}
+            </div>
+          )}
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((item, idx) => (
+            {statsCards.map((item, idx) => (
               <div key={idx} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between transition-transform hover:-translate-y-1 cursor-pointer">
                 <div className="flex justify-between items-start mb-4">
                   <div className={`w-12 h-12 ${item.color} rounded-xl flex items-center justify-center`}>
                     <span className="material-symbols-outlined text-2xl">{item.icon}</span>
                   </div>
-                  <span className={`text-xs font-black px-2 py-1 rounded-lg ${item.change.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                  <span className={`text-xs font-black px-2 py-1 rounded-lg ${item.change.startsWith('+') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}`}>
                     {item.change}
                   </span>
                 </div>
@@ -97,7 +145,7 @@ export default function AdminDashboard() {
             <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="font-black text-slate-900 dark:text-white text-lg">Platform Revenue Activity</h2>
-                <select className="bg-slate-50 dark:bg-slate-700 border-none text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                <select className="bg-slate-50 dark:bg-slate-700 border-none text-slate-900 dark:text-white text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500">
                   <option>Past 7 Days</option>
                   <option>Past Month</option>
                 </select>
@@ -131,7 +179,7 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
-              <button className="w-full mt-6 py-3 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl hover:bg-slate-100 transition-all">
+              <button className="w-full mt-6 py-3 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-600 transition-all">
                 View All Logs
               </button>
             </div>

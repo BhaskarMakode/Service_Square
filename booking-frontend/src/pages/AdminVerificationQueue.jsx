@@ -1,7 +1,38 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import apiClient from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminVerificationQueue() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    const [providers, setProviders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (!user || user.role !== 'admin') {
+            navigate('/');
+            return;
+        }
+        fetchProviders();
+    }, [user, navigate]);
+
+    const fetchProviders = async () => {
+        try {
+            setLoading(true);
+            const res = await apiClient.get('/admin/providers?verificationStatus=pending');
+            if (res.data.success) {
+                setProviders(res.data.data.providers || []);
+            }
+        } catch (err) {
+            setError(err.message || 'Failed to fetch pending verifications');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="bg-surface font-body text-on-surface antialiased min-h-screen flex">
             {/* Sidebar Navigation */}
@@ -16,7 +47,7 @@ export default function AdminVerificationQueue() {
                     </div>
                 </Link>
                 <nav className="flex-1 flex flex-col gap-1">
-                    <Link className="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-200" to="/admin-verification-queue">
+                    <Link className="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-200" to="/admin-dashboard">
                         <span className="material-symbols-outlined">dashboard</span>
                         <span className="text-sm font-medium tracking-wide">Overview</span>
                     </Link>
@@ -67,9 +98,17 @@ export default function AdminVerificationQueue() {
                         </button>
                     </div>
                 </header>
+
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl font-medium border border-red-100 flex items-center gap-2">
+                        <span className="material-symbols-outlined">error</span>
+                        {error}
+                    </div>
+                )}
+
                 {/* Bento Grid Summary Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm">
+                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm border border-surface-container/50">
                         <div className="flex items-center justify-between mb-4">
                             <span className="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg">list_alt</span>
                             <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">+12%</span>
@@ -79,17 +118,17 @@ export default function AdminVerificationQueue() {
                             <h3 className="text-2xl font-black text-on-surface">1,284</h3>
                         </div>
                     </div>
-                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm">
+                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm border border-surface-container/50">
                         <div className="flex items-center justify-between mb-4">
                             <span className="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg">pending_actions</span>
                             <span className="text-xs font-bold text-tertiary bg-tertiary-fixed px-2 py-0.5 rounded-full">Action Required</span>
                         </div>
                         <div>
                             <p className="text-on-surface-variant text-sm font-medium">Pending Review</p>
-                            <h3 className="text-2xl font-black text-on-surface">43</h3>
+                            <h3 className="text-2xl font-black text-on-surface">{providers.length}</h3>
                         </div>
                     </div>
-                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm">
+                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm border border-surface-container/50">
                         <div className="flex items-center justify-between mb-4">
                             <span className="material-symbols-outlined text-secondary bg-secondary-container p-2 rounded-lg">verified</span>
                         </div>
@@ -98,7 +137,7 @@ export default function AdminVerificationQueue() {
                             <h3 className="text-2xl font-black text-on-surface">18</h3>
                         </div>
                     </div>
-                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm">
+                    <div className="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between shadow-sm border border-surface-container/50">
                         <div className="flex items-center justify-between mb-4">
                             <span className="material-symbols-outlined text-error bg-error-container p-2 rounded-lg">block</span>
                         </div>
@@ -108,6 +147,7 @@ export default function AdminVerificationQueue() {
                         </div>
                     </div>
                 </div>
+
                 {/* Verification Table Section */}
                 <section className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm border border-surface-container">
                     <div className="px-8 py-6 flex items-center justify-between border-b border-surface-container">
@@ -129,127 +169,67 @@ export default function AdminVerificationQueue() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-surface-container">
-                                <tr className="hover:bg-surface-container-low/50 transition-colors group">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-3">
-                                            <img className="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2xDNasi_Oe4kp32YRb5hR-h544K5-UEzOPVLhjtdwYlXM19UsnjDTrkKKXLbX6WsYbV2DqrtNVd_f25iS1YUS6xC9yXHDPEVVX6rX1A4oGEpk0Vfm5bMpWLtFF75ag4NOqg25_GrsXnn2hY6AxZdV23P5RP3-ZPJ0CXLyUgyfmORiIEEaZOqf5ULYC5Tc5BTN-kiPSLSl45sOvMkaqfzcwPQHQGt4W6K_XMholgmGmG_gpYUbujkxUAe8hf8OrQHGgFns0YshjXo" alt="Provider" />
-                                            <div>
-                                                <p className="font-bold text-on-surface">Alex Rivera</p>
-                                                <p className="text-xs text-on-surface-variant">alex.r@profix.com</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                            <span className="text-sm font-medium">Home Maintenance</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-sm text-on-surface-variant">Oct 24, 2023</td>
-                                    <td className="px-8 py-5">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
-                                            Pending
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <Link to="/admin-verification-detail" className="inline-block px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors active:scale-[0.98]">View Details</Link>
-                                    </td>
-                                </tr>
-                                <tr className="hover:bg-surface-container-low/50 transition-colors group">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-3">
-                                            <img className="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS4_UOl1Us4GOcNL87LqiInKiVik-c4XBCkTLZpoYmYWtKjA113FB_LG__WcgsNvVZStOCLTJ8pZXbR5toQpFHc1nsXzfQHrgbC9ZXrqQGUDaUB5wLMTF08oprqa6l8VTHo7g-rnbmirqVsC8O1Nb3N2l5CJ6vEYRO5q__eQrwzOg7y2WmOKVE_J3IR5fynEnOtSgisAwVle1rQxVkBZPrU9wK7jd65RvcOgr4xVerGrucLdC4ihzJIPoy9AdcHBqN4cse-jzD69c" alt="Provider" />
-                                            <div>
-                                                <p className="font-bold text-on-surface">Sarah Jenkins</p>
-                                                <p className="text-xs text-on-surface-variant">sarah.j@sparkle.co</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                            <span className="text-sm font-medium">Cleaning Services</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-sm text-on-surface-variant">Oct 23, 2023</td>
-                                    <td className="px-8 py-5">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
-                                            Pending
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <Link to="/admin-verification-detail" className="inline-block px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors active:scale-[0.98]">View Details</Link>
-                                    </td>
-                                </tr>
-                                <tr className="hover:bg-surface-container-low/50 transition-colors group">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-3">
-                                            <img className="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhyVhbGZ3GzgUuwEFy-M_puWzIJpgV0B6jQAeFjlGSRyIfkECH0f-0XjgXVk0p8E1W36wg5-YoDNySnnuAdTFQfi-54BaWbS38woW1jJ0akD-ybQ8CbowEX_AIpN9egj3Oep7TgqtszfnzcxiXgX4qA9CMdXX8XgWs5HPgObAD2ByW83FcZkzJvxisKZgJ4zhHJN79Hv4uUa6IcKN9zmflqpgkz9Tw_W6lLH-WNLvD9-kwxkgLIly9BKPI2b_slwCeiIYuSuGWjCQ" alt="Provider" />
-                                            <div>
-                                                <p className="font-bold text-on-surface">Michael Chen</p>
-                                                <p className="text-xs text-on-surface-variant">m.chen@voltwise.io</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                                            <span className="text-sm font-medium">Electrical</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-sm text-on-surface-variant">Oct 22, 2023</td>
-                                    <td className="px-8 py-5">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
-                                            Pending
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <Link to="/admin-verification-detail" className="inline-block px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors active:scale-[0.98]">View Details</Link>
-                                    </td>
-                                </tr>
-                                <tr className="hover:bg-surface-container-low/50 transition-colors group">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-3">
-                                            <img className="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRHD601S7XRxp1GCebYOKfB9m2QBO_F-bVFwUUTBbm8pt-_FC3WfyqUp8kfhTMYZw1G4zfajkrrPxFjo0sxRtEbXw_qNzeljm6-pYlp-PaziAnCkmfp1L1ta6ZjynVnsGICeGN8gyzDR1riUI8Yqh64_7tqv-3yNMBkh6q3KB_AK4Fqs94uksKVR3OwDVxnXIQpNAYSc9NEL8AYJZhQOhZTQq07WkpCB1kNgcVhRYGOkC5oRojfO7ekyAhvkIobR2RnaJRygTaxOg" alt="Provider" />
-                                            <div>
-                                                <p className="font-bold text-on-surface">Elena Rodriguez</p>
-                                                <p className="text-xs text-on-surface-variant">e.rod@greenery.net</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                            <span className="text-sm font-medium">Landscaping</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-sm text-on-surface-variant">Oct 21, 2023</td>
-                                    <td className="px-8 py-5">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
-                                            Pending
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <Link to="/admin-verification-detail" className="inline-block px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors active:scale-[0.98]">View Details</Link>
-                                    </td>
-                                </tr>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-8 py-10 text-center text-slate-500 animate-pulse font-bold">
+                                            Loading Queue...
+                                        </td>
+                                    </tr>
+                                ) : providers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-8 py-10 text-center text-slate-500">
+                                            No pending verification applications.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    providers.map(p => (
+                                        <tr className="hover:bg-surface-container-low/50 transition-colors group" key={p._id}>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-3">
+                                                    <img className="w-10 h-10 rounded-full object-cover bg-indigo-100" src={p.userId?.avatar || `https://ui-avatars.com/api/?name=${p.userId?.name || 'Provider'}&background=4F46E5&color=fff`} alt="Provider" />
+                                                    <div>
+                                                        <p className="font-bold text-on-surface capitalize">{p.userId?.name || 'Unknown'}</p>
+                                                        <p className="text-xs text-on-surface-variant">{p.userId?.email || 'No email'}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <span className="flex items-center gap-2">
+                                                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                                    <span className="text-sm font-medium capitalize">{p.categoryId?.name || p.category || 'Service'}</span>
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-sm text-on-surface-variant">
+                                                {new Date(p.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
+                                                    Pending
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                <Link to={`/admin-verification-detail?id=${p._id}`} className="inline-block px-4 py-2 text-sm font-bold text-primary hover:bg-primary-fixed rounded-lg transition-colors active:scale-[0.98]">View Details</Link>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-8 py-6 flex items-center justify-between border-t border-surface-container text-sm text-on-surface-variant bg-surface-container-low/20">
-                        <p>Showing 1 to 4 of 43 pending applications</p>
-                        <div className="flex gap-1">
-                            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
-                                <span className="material-symbols-outlined text-sm">chevron_left</span>
-                            </button>
-                            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold">1</button>
-                            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors font-medium">2</button>
-                            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors font-medium">3</button>
-                            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
-                                <span className="material-symbols-outlined text-sm">chevron_right</span>
-                            </button>
+                    {!loading && providers.length > 0 && (
+                        <div className="px-8 py-6 flex items-center justify-between border-t border-surface-container text-sm text-on-surface-variant bg-surface-container-low/20">
+                            <p>Showing 1 to {providers.length} of {providers.length} pending applications</p>
+                            <div className="flex gap-1">
+                                <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                                </button>
+                                <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold">1</button>
+                                <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </section>
             </main>
             {/* Contextual FAB */}
