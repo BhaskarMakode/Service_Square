@@ -24,7 +24,7 @@ export default function ProviderPortfolio() {
   const fetchProfileAndData = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/users/profile');
+      const res = await apiClient.get('/auth/profile');
       if (res.data.success && res.data.data.providerProfile) {
         const providerData = res.data.data.providerProfile;
         setProvider(providerData);

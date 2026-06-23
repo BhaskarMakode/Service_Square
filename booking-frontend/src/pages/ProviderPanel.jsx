@@ -26,7 +26,7 @@ export default function ProviderPanel() {
       setLoading(true);
       // Fetch provider profile and bookings concurrently
       const [profileRes, bookingsRes] = await Promise.all([
-        apiClient.get('/users/profile'),
+        apiClient.get('/auth/profile'),
         apiClient.get('/bookings/my-bookings')
       ]);
 

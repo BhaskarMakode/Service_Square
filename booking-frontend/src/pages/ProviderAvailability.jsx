@@ -35,7 +35,7 @@ export default function ProviderAvailability() {
   const fetchAvailability = async () => {
     try {
       setLoading(true);
-      const profileRes = await apiClient.get('/users/profile');
+      const profileRes = await apiClient.get('/auth/profile');
       if (profileRes.data.success && profileRes.data.data.providerProfile) {
         const providerId = profileRes.data.data.providerProfile._id;
         const availRes = await apiClient.get(`/availability/provider/${providerId}`);
