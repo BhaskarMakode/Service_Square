@@ -66,8 +66,11 @@ const createProviderProfile = async (user, overrides = {}) => {
 };
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // Check if already connected (from setup.js)
+  if (mongoose.connection.readyState === 0) {
+    mongo = await MongoMemoryServer.create();
+    await mongoose.connect(mongo.getUri());
+  }
   await Promise.all([
     Address.syncIndexes(),
     LiveLocation.syncIndexes(),
@@ -83,8 +86,11 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await mongoose.disconnect();
-  await mongo.stop();
+  // Only disconnect if mongo was created in this test file
+  if (mongo) {
+    await mongoose.disconnect();
+    await mongo.stop();
+  }
   fs.rmSync(path.resolve(__dirname, "..", "test-uploads"), { recursive: true, force: true });
 });
 
@@ -102,18 +108,18 @@ describe("Expanded APIs", () => {
     };
 
     await request(app)
-      .post("/api/address/add")
+      .post("/api/addresses/add")
       .set("Authorization", auth(user))
       .send({ ...baseAddress, isDefault: false })
       .expect(201);
 
     await request(app)
-      .post("/api/address/add")
+      .post("/api/addresses/add")
       .set("Authorization", auth(user))
       .send({ ...baseAddress, houseNo: "44", isDefault: true })
       .expect(201);
 
-    const response = await request(app).get("/api/address").set("Authorization", auth(user)).expect(200);
+    const response = await request(app).get("/api/addresses").set("Authorization", auth(user)).expect(200);
     const defaults = response.body.data.addresses.filter((address) => address.isDefault);
 
     expect(defaults).toHaveLength(1);

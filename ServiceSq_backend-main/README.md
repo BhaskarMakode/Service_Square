@@ -497,11 +497,13 @@ All new routes are available under both `/api/*` and `/api/v1/*`.
 ### Address Management
 
 ```http
-POST /api/address/add
-GET /api/address
-PUT /api/address/:id
-DELETE /api/address/:id
+POST /api/addresses/add
+GET /api/addresses
+PUT /api/addresses/:id
+DELETE /api/addresses/:id
 ```
+
+Legacy `/api/address` routes remain available for existing clients.
 
 Example:
 
@@ -674,7 +676,7 @@ Authenticated calls to `/api/search/providers?q=fan repair` automatically save r
 ## API Testing Examples
 
 ```bash
-curl -H "Authorization: Bearer <jwt>" http://localhost:5000/api/address
+curl -H "Authorization: Bearer <jwt>" http://localhost:5000/api/addresses
 curl -H "Authorization: Bearer <admin-jwt>" http://localhost:5000/api/analytics/revenue?year=2026
 curl -X POST -H "Authorization: Bearer <provider-jwt>" -H "Content-Type: application/json" \
   -d '{"planName":"premium_monthly","paymentMethod":"mock"}' \

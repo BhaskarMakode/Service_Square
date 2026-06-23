@@ -9,7 +9,11 @@
     "check": "node scripts/checkSyntax.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "seed:admin": "node scripts/createAdmin.js"
+    "test:startup": "jest --runInBand --testNamePattern='Startup' --verbose",
+    "test:health": "jest --runInBand --testNamePattern='Health'",
+    "test:coverage": "jest --runInBand --coverage --collectCoverageFrom='**/{controllers,middleware,services,utils,models}/**/*.js' --coveragePathIgnorePatterns='/node_modules/'",
+    "seed:admin": "node scripts/createAdmin.js",
+    "seed:providers": "node scripts/seedPdfProviders.js"
   },
   "keywords": [
     "localconnect",
@@ -52,6 +56,23 @@
     "testMatch": [
       "**/tests/**/*.test.js"
     ],
-    "clearMocks": true
+    "setupFilesAfterEnv": [
+      "./tests/setup.js"
+    ],
+    "clearMocks": true,
+    "testTimeout": 30000,
+    "collectCoverageFrom": [
+      "**/{controllers,middleware,services,utils,models}/**/*.js",
+      "!**/node_modules/**",
+      "!**/tests/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 50,
+        "functions": 50,
+        "lines": 50,
+        "statements": 50
+      }
+    }
   }
 }

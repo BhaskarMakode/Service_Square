@@ -33,6 +33,7 @@ const { sendSuccess } = require("./utils/apiResponse");
 const app = express();
 
 app.disable("x-powered-by");
+app.set("etag", false);
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "")
   .split(",")
@@ -78,6 +79,15 @@ if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
+const preventApiCaching = (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+};
+
+app.use(["/api", "/api/v1"], preventApiCaching);
 app.use(apiLimiter);
 
 /**
@@ -116,6 +126,7 @@ app.get("/health", (req, res) => {
 });
 
 const apiRoutes = [
+  ["/addresses", addressRoutes],
   ["/address", addressRoutes],
   ["/admin", adminRoutes],
   ["/analytics", analyticsRoutes],

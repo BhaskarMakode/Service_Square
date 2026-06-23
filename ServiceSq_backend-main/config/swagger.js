@@ -997,7 +997,7 @@ Object.assign(swaggerDefinition.components.schemas, {
 });
 
 Object.assign(swaggerDefinition.paths, {
-  "/api/address/add": {
+  "/api/addresses/add": {
     post: {
       summary: "Add saved address",
       tags: ["Addresses"],
@@ -1015,7 +1015,7 @@ Object.assign(swaggerDefinition.paths, {
       responses: { 201: created("Address added."), ...commonErrors }
     }
   },
-  "/api/address": {
+  "/api/addresses": {
     get: {
       summary: "List saved addresses",
       tags: ["Addresses"],
@@ -1023,7 +1023,7 @@ Object.assign(swaggerDefinition.paths, {
       responses: { 200: ok("Addresses fetched."), 401: commonErrors[401] }
     }
   },
-  "/api/address/{id}": {
+  "/api/addresses/{id}": {
     put: {
       summary: "Update saved address",
       tags: ["Addresses"],
