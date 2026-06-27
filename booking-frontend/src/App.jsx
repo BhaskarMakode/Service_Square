@@ -102,11 +102,15 @@ function App() {
                       <Route path="/tracking" element={<LiveTracking />} />
                       <Route path="/booking-confirmation" element={<BookingConfirmation />} />
                       <Route path="/confirmation" element={<BookingConfirmation />} />
-                      <Route path="/chat" element={<ChatPage />} />
                       <Route path="/address-book" element={<AddressBook />} />
                       <Route path="/invoices" element={<InvoiceViewer />} />
                       <Route path="/notifications" element={<NotificationsCenter />} />
                       <Route path="/support" element={<SupportTickets />} />
+                    </Route>
+
+                    {/* Shared Protected Routes */}
+                    <Route element={<ProtectedRoute allowedRoles={['Customer', 'Provider', 'Admin']} />}>
+                      <Route path="/chat" element={<ChatPage />} />
                     </Route>
 
                     {/* Provider Protected Routes (Approved Only) */}

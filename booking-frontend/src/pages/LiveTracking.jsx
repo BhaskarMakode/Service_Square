@@ -1,7 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import apiClient from '../services/apiClient';
 import { formatCurrency } from '../utils/currency';
+
+// Fix default leaflet marker icon issue in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function MapBoundsFit({ providerPos, customerPos }) {
+  const map = useMap();
+  useEffect(() => {
+    if (providerPos && customerPos) {
+      const bounds = L.latLngBounds([providerPos, customerPos]);
+      map.fitBounds(bounds, { padding: [80, 80] });
+    } else if (providerPos) {
+      map.setView(providerPos, 14);
+    }
+  }, [providerPos, customerPos, map]);
+  return null;
+}
+
+const getCategoryIcon = (category) => {
+  switch (category?.toLowerCase()) {
+    case 'electrician': return 'electric_bolt';
+    case 'ac-service':
+    case 'ac': return 'ac_unit';
+    case 'plumbing': return 'plumbing';
+    case 'cleaning': return 'cleaning_services';
+    case 'appliance': return 'home_appliance';
+    case 'puncture-tyre': return 'build';
+    default: return 'handyman';
+  }
+};
+
+const customerIcon = L.divIcon({
+  html: `<div class="relative flex items-center justify-center">
+           <div class="absolute w-8 h-8 bg-rose-500 rounded-full border-2 border-white shadow-lg animate-ping opacity-75"></div>
+           <div class="relative w-8 h-8 bg-rose-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
+             <span class="material-symbols-outlined text-sm font-bold">person</span>
+           </div>
+         </div>`,
+  className: 'custom-div-icon',
+  iconSize: [32, 32],
+  iconAnchor: [16, 16]
+});
 
 export default function LiveTracking() {
   const [searchParams] = useSearchParams();
@@ -37,30 +86,50 @@ export default function LiveTracking() {
   }, [bookingId]);
 
   useEffect(() => {
-    if (!booking?.providerId?._id || !navigator.geolocation) return;
+    if (!booking) return;
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const coords = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        };
-        setCustomerCoords(coords);
+    const savedCoords = booking.location?.coordinates;
+    const hasSavedCoords = Array.isArray(savedCoords) && savedCoords.length === 2;
 
-        try {
-          const res = await apiClient.get(`/location/provider/${booking.providerId._id}`, { params: coords });
-          if (res.data.success) {
-            setLiveLocation(res.data.data.liveLocation);
-            setDistanceKm(res.data.data.distanceKm);
-          }
-        } catch (err) {
-          console.warn('Live provider location unavailable, using profile location if present.', err);
-        }
-      },
-      () => {
-        setCustomerCoords(null);
+    const coords = hasSavedCoords
+      ? { latitude: savedCoords[1], longitude: savedCoords[0] }
+      : null;
+
+    if (coords) {
+      setCustomerCoords(coords);
+      if (booking.providerId?._id) {
+        apiClient.get(`/location/provider/${booking.providerId._id}`, { params: coords })
+          .then(res => {
+            if (res.data.success) {
+              setLiveLocation(res.data.data.liveLocation);
+              setDistanceKm(res.data.data.distanceKm);
+            }
+          })
+          .catch(err => console.warn('Failed to fetch provider location via saved coords', err));
       }
-    );
+    } else if (navigator.geolocation && booking.providerId?._id) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const browserCoords = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          setCustomerCoords(browserCoords);
+          try {
+            const res = await apiClient.get(`/location/provider/${booking.providerId._id}`, { params: browserCoords });
+            if (res.data.success) {
+              setLiveLocation(res.data.data.liveLocation);
+              setDistanceKm(res.data.data.distanceKm);
+            }
+          } catch (err) {
+            console.warn('Failed to fetch provider location via browser geolocation', err);
+          }
+        },
+        () => {
+          setCustomerCoords(null);
+        }
+      );
+    }
   }, [booking]);
 
   if (loading) {
@@ -76,38 +145,64 @@ export default function LiveTracking() {
   const providerName = providerUser.name || 'Assigned Provider';
   const providerCoords = liveLocation?.location?.coordinates || provider?.location?.coordinates;
   const hasProviderCoords = Array.isArray(providerCoords) && providerCoords.length === 2;
+  const providerPos = hasProviderCoords ? [providerCoords[1], providerCoords[0]] : null;
   const mapsUrl = hasProviderCoords
     ? `https://www.google.com/maps/dir/?api=1${customerCoords ? `&origin=${customerCoords.latitude},${customerCoords.longitude}` : ''}&destination=${providerCoords[1]},${providerCoords[0]}&travelmode=driving`
     : null;
+
+  const providerIcon = L.divIcon({
+    html: `<div class="relative flex items-center justify-center">
+             <div class="absolute w-10 h-10 bg-indigo-600 rounded-2xl shadow-xl animate-pulse opacity-50"></div>
+             <div class="relative w-10 h-10 bg-indigo-600 rounded-2xl border-2 border-white shadow-xl flex items-center justify-center text-white">
+               <span class="material-symbols-outlined text-lg">${getCategoryIcon(serviceType)}</span>
+             </div>
+           </div>`,
+    className: 'custom-div-icon',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
 
   return (
     <main className="relative h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col md:flex-row">
       {/* Live Map Background */}
       <div className="absolute inset-0 z-0 bg-slate-100 dark:bg-slate-900">
-        <div className="w-full h-full grayscale opacity-40 mix-blend-multiply bg-slate-200 dark:bg-slate-800">
-          {/* Placeholder for real map */}
-        </div>
-        {/* Simulated Map Markers */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-          <div className="relative">
+        {hasProviderCoords ? (
+          <MapContainer
+            center={providerPos}
+            zoom={14}
+            className="w-full h-full"
+            zoomControl={false}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
             {/* Provider Marker */}
-            <div className="absolute -top-12 -left-12 flex flex-col items-center">
-              <div className="bg-indigo-600 text-white p-3 rounded-2xl shadow-2xl animate-bounce">
-                <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>electric_bolt</span>
-              </div>
-              <div className="mt-2 px-3 py-1 bg-white shadow-md rounded-full text-[10px] font-bold uppercase tracking-wider text-indigo-600">On the way</div>
-            </div>
-            {/* Destination Marker */}
-            <div className="absolute top-20 left-40">
-              <div className="w-6 h-6 bg-rose-500 rounded-full border-4 border-white shadow-xl"></div>
-              <div className="mt-2 px-3 py-1 bg-white shadow-md rounded-full text-[10px] font-bold uppercase tracking-wider text-rose-500">Your Location</div>
-            </div>
-            {/* Path Simulation */}
-            <svg className="absolute top-0 left-0 w-[400px] h-[300px] pointer-events-none opacity-40" viewBox="0 0 400 300">
-              <path d="M 0 0 Q 150 50 200 200" fill="none" stroke="#4F46E5" strokeDasharray="8 8" strokeWidth="4"></path>
-            </svg>
+            <Marker position={providerPos} icon={providerIcon}>
+              <Popup>
+                <div className="text-xs font-bold capitalize">{providerName} (Provider)</div>
+              </Popup>
+            </Marker>
+            
+            {/* Customer Marker */}
+            {customerCoords && (
+              <Marker position={[customerCoords.latitude, customerCoords.longitude]} icon={customerIcon}>
+                <Popup>
+                  <div className="text-xs font-bold">Your Location</div>
+                </Popup>
+              </Marker>
+            )}
+            
+            <MapBoundsFit 
+              providerPos={providerPos} 
+              customerPos={customerCoords ? [customerCoords.latitude, customerCoords.longitude] : null} 
+            />
+          </MapContainer>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold bg-slate-100 dark:bg-slate-900">
+            Map Coordinates Unavailable
           </div>
-        </div>
+        )}
       </div>
 
       {/* Tracking Content Shell */}

@@ -41,7 +41,17 @@ export default function ChatPage() {
       // Fetch bookings, using them as the source of "conversations"
       const res = await apiClient.get('/bookings/my-bookings?limit=50');
       if (res.data.success) {
-        setBookings(res.data.data.bookings || []);
+        const list = res.data.data.bookings || [];
+        setBookings(list);
+        
+        // Auto-select booking if query param present
+        const queryBookingId = new URLSearchParams(window.location.search).get('bookingId') || new URLSearchParams(window.location.search).get('id');
+        if (queryBookingId && list.length > 0) {
+          const match = list.find(b => b._id === queryBookingId);
+          if (match) {
+            setSelectedBooking(match);
+          }
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to fetch conversations');

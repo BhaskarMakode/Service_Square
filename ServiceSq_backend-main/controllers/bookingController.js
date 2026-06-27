@@ -63,6 +63,15 @@ const createBooking = asyncHandler(async (req, res) => {
   });
 
   const paymentMethod = req.body.paymentMethod || "cash";
+  
+  let location = undefined;
+  if (req.body.latitude !== undefined && req.body.longitude !== undefined) {
+    location = {
+      type: "Point",
+      coordinates: [Number(req.body.longitude), Number(req.body.latitude)]
+    };
+  }
+
   const booking = await Booking.create({
     customerId: req.user._id,
     providerId: provider._id,
@@ -74,7 +83,8 @@ const createBooking = asyncHandler(async (req, res) => {
     amount: Number(req.body.amount),
     status: "pending",
     paymentMethod,
-    paymentStatus: paymentMethod === "cash" ? "unpaid" : "pending"
+    paymentStatus: paymentMethod === "cash" ? "unpaid" : "pending",
+    location
   });
 
   if (paymentMethod === "cash") {

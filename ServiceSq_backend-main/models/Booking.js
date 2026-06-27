@@ -71,12 +71,25 @@ const bookingSchema = new mongoose.Schema(
     paymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment"
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point"
+      },
+      coordinates: {
+        type: [Number],
+        default: [77.4126, 23.2599] // [longitude, latitude]
+      }
     }
   },
   {
     timestamps: true
   }
 );
+
+bookingSchema.index({ location: "2dsphere" });
 
 bookingSchema.index({
   providerId: 1,

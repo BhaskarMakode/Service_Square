@@ -34,7 +34,15 @@ const createBookingValidator = [
   body("paymentMethod")
     .optional()
     .isIn(["cash", "razorpay", "mock"])
-    .withMessage("paymentMethod must be cash, razorpay, or mock.")
+    .withMessage("paymentMethod must be cash, razorpay, or mock."),
+  body("latitude")
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage("latitude must be a valid float between -90 and 90."),
+  body("longitude")
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage("longitude must be a valid float between -180 and 180.")
 ];
 
 const updateBookingStatusValidator = [

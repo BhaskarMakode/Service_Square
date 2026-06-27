@@ -44,6 +44,21 @@ const buildProfilePayload = async (body, requireLocation = false) => {
   if (body.experience !== undefined) payload.experience = Number(body.experience);
   if (body.availabilityStatus !== undefined) payload.availabilityStatus = body.availabilityStatus;
   if (body.address !== undefined) payload.address = String(body.address).trim();
+  if (body.bio !== undefined) payload.bio = String(body.bio).trim();
+  if (body.services !== undefined) {
+    if (Array.isArray(body.services)) {
+      payload.services = body.services.map((s) => ({
+        _id: s._id,
+        title: String(s.title || "").trim(),
+        description: s.description ? String(s.description).trim() : "",
+        price: Number(s.price || 0),
+        duration: Number(s.duration || 0),
+        isActive: s.isActive !== undefined ? Boolean(s.isActive) : true
+      }));
+    } else {
+      payload.services = [];
+    }
+  }
 
   const { longitude, latitude } = getCoordinatesFromBody(body);
 

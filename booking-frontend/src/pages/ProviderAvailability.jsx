@@ -85,7 +85,7 @@ export default function ProviderAvailability() {
   const handleToggleOnlineStatus = async () => {
     try {
       const newOnline = !isOnline;
-      const newAvailable = newOnline ? isAvailable : false;
+      const newAvailable = newOnline; // going online makes provider available; offline makes them unavailable
       const res = await apiClient.put('/availability/toggle', { isOnline: newOnline, isAvailable: newAvailable });
       if (res.data.success) {
         setIsOnline(res.data.data.availability.isOnline);
@@ -93,6 +93,18 @@ export default function ProviderAvailability() {
       }
     } catch (err) {
       alert('Failed to toggle status.');
+    }
+  };
+
+  const handleToggleAvailabilityStatus = async () => {
+    try {
+      const newAvailable = !isAvailable;
+      const res = await apiClient.put('/availability/toggle', { isOnline, isAvailable: newAvailable });
+      if (res.data.success) {
+        setIsAvailable(res.data.data.availability.isAvailable);
+      }
+    } catch (err) {
+      alert('Failed to toggle availability.');
     }
   };
 
@@ -197,6 +209,22 @@ export default function ProviderAvailability() {
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0 scale-125 origin-right">
                 <input className="sr-only peer" checked={isOnline} onChange={handleToggleOnlineStatus} type="checkbox" />
+                <span className="w-12 h-7 bg-black/20 dark:bg-black/40 rounded-full peer peer-checked:bg-white/20 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></span>
+              </label>
+            </section>
+
+            <section className={`rounded-2xl p-8 shadow-sm transition-all flex items-center justify-between gap-6 ${isAvailable ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-indigo-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`} style={{ opacity: isOnline ? 1 : 0.6, pointerEvents: isOnline ? 'auto' : 'none' }}>
+              <div>
+                <p className="text-sm font-bold opacity-80 mb-2 uppercase tracking-wider">Booking Availability</p>
+                <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+                  {isAvailable ? 'Accepting Bookings' : 'Busy / Fully Booked'}
+                </h2>
+                <p className="opacity-90 max-w-sm text-sm">
+                  {isAvailable ? 'Customers can book your services for available times.' : 'Your profile shows as Busy. No new requests.'}
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0 scale-125 origin-right">
+                <input className="sr-only peer" checked={isAvailable} disabled={!isOnline} onChange={handleToggleAvailabilityStatus} type="checkbox" />
                 <span className="w-12 h-7 bg-black/20 dark:bg-black/40 rounded-full peer peer-checked:bg-white/20 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></span>
               </label>
             </section>

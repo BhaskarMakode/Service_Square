@@ -39,7 +39,24 @@ const createProviderValidator = [
   body("location.coordinates")
     .optional()
     .isArray({ min: 2, max: 2 })
-    .withMessage("location.coordinates must be [longitude, latitude].")
+    .withMessage("location.coordinates must be [longitude, latitude]."),
+  body("services")
+    .optional()
+    .isArray()
+    .withMessage("services must be an array."),
+  body("services.*.title")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("service title cannot be empty."),
+  body("services.*.price")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("service price must be a positive number."),
+  body("services.*.duration")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("service duration must be a positive integer.")
 ];
 
 const nearbyProviderValidator = [
@@ -132,7 +149,29 @@ const updateProviderValidator = [
   body("location.coordinates")
     .optional()
     .isArray({ min: 2, max: 2 })
-    .withMessage("location.coordinates must be [longitude, latitude].")
+    .withMessage("location.coordinates must be [longitude, latitude]."),
+  body("services")
+    .optional()
+    .isArray()
+    .withMessage("services must be an array."),
+  body("services.*.title")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("service title cannot be empty."),
+  body("services.*.price")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("service price must be a positive number."),
+  body("services.*.duration")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("service duration must be a positive integer."),
+  body("bio")
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("bio cannot exceed 1000 characters.")
 ];
 
 module.exports = {

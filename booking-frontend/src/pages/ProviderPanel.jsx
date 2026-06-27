@@ -357,6 +357,13 @@ export default function ProviderPanel() {
                             <div className="sm:hidden text-sm font-medium">{job.customerId?.name?.split(' ')[0] || 'Client'}</div>
                           </div>
                           
+                          <Link 
+                            to={`/chat?bookingId=${job._id}`}
+                            className="bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-all flex items-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
+                            Chat
+                          </Link>
                           <button 
                             onClick={() => handleUpdateBookingStatus(job._id, 'completed')}
                             disabled={actionLoading === job._id}

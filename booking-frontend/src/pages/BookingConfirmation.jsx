@@ -158,10 +158,12 @@ export default function BookingConfirmation() {
           <Link to={`/tracking?bookingId=${booking._id}`} className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-500/30 hover:brightness-110 active:scale-[0.98] transition-all duration-200 text-center inline-block">
             Track Service
           </Link>
+          <Link to={`/chat?bookingId=${booking._id}`} className="w-full sm:w-auto px-10 py-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl border border-indigo-100 dark:border-slate-700 active:scale-[0.98] transition-all duration-200 text-center inline-block">
+            Chat with Provider
+          </Link>
           <Link to="/" className="w-full sm:w-auto px-10 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] transition-all duration-200 text-center inline-block">
             Back to Home
           </Link>
-          <BackButton fallback="/dashboard" className="w-full sm:w-auto justify-center px-10 py-4" />
         </div>
       </main>
 

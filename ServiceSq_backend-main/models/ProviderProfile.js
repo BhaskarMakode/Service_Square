@@ -28,6 +28,12 @@ const providerProfileSchema = new mongoose.Schema(
         lowercase: true
       }
     ],
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: ""
+    },
     hourlyRate: {
       type: Number,
       required: true,
@@ -94,6 +100,34 @@ const providerProfileSchema = new mongoose.Schema(
       trim: true,
       maxlength: 500
     },
+    services: [
+      {
+        title: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 500
+        },
+        price: {
+          type: Number,
+          required: true,
+          min: 0
+        },
+        duration: {
+          type: Number, // duration in minutes
+          required: true,
+          min: 1
+        },
+        isActive: {
+          type: Boolean,
+          default: true
+        }
+      }
+    ],
     isPremium: {
       type: Boolean,
       default: false,

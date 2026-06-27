@@ -42,6 +42,10 @@ export default function UserDashboard() {
               <span className="material-symbols-outlined" data-icon="dashboard">dashboard</span>
               <span>Dashboard Overview</span>
             </Link>
+            <Link className="text-slate-500 dark:text-slate-400 px-4 py-3 flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-900/50 rounded-xl hover:translate-x-1 transition-all active:scale-[0.98] duration-150" to="/chat">
+              <span className="material-symbols-outlined" data-icon="chat_bubble">chat_bubble</span>
+              <span>Messages</span>
+            </Link>
             <Link className="text-slate-500 dark:text-slate-400 px-4 py-3 flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-900/50 rounded-xl hover:translate-x-1 transition-all active:scale-[0.98] duration-150" to="/address-book">
               <span className="material-symbols-outlined" data-icon="location_on">location_on</span>
               <span>Address Book</span>
@@ -104,7 +108,7 @@ export default function UserDashboard() {
                   ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                       {activeBookings.map((booking) => (
-                        <Link key={booking._id} to={`/tracking?id=${booking._id}`} className="bg-white dark:bg-slate-900 p-6 rounded-xl flex flex-col md:flex-row gap-6 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all">
+                        <div key={booking._id} className="bg-white dark:bg-slate-900 p-6 rounded-xl flex flex-col justify-between border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all">
                           <div className="flex-1 flex flex-col">
                             <div className="flex justify-between items-start mb-2">
                               <div className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
@@ -116,7 +120,7 @@ export default function UserDashboard() {
                             <p className="text-slate-500 text-sm mb-4">
                               Address: <span className="text-slate-700 dark:text-slate-300 font-semibold">{booking.address}</span>
                             </p>
-                            <div className="mt-auto flex items-center gap-4 text-xs text-slate-500">
+                            <div className="mt-auto flex items-center gap-4 text-xs text-slate-500 mb-6">
                               <div className="flex items-center gap-1.5">
                                 <span className="material-symbols-outlined text-sm">event</span>
                                 {new Date(booking.bookingDate).toLocaleDateString()}
@@ -127,7 +131,16 @@ export default function UserDashboard() {
                               </div>
                             </div>
                           </div>
-                        </Link>
+                          <div className="flex gap-3 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+                            <Link to={`/tracking?id=${booking._id}`} className="flex-1 text-center py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors">
+                              Track Service
+                            </Link>
+                            <Link to={`/chat?bookingId=${booking._id}`} className="flex-1 text-center py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                              <span className="material-symbols-outlined text-sm">chat_bubble</span>
+                              Message
+                            </Link>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}

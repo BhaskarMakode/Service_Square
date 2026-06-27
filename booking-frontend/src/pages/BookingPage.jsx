@@ -1,9 +1,42 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import BackButton from '../components/BackButton';
 import { addressApi, availabilityApi, bookingsApi, paymentsApi, providersApi } from '../services/serviceApi';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatRate } from '../utils/currency';
+
+// Fix default leaflet marker icon issue in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function MapRecenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  return null;
+}
+
+function LocationMarker({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+
+  return position[0] && position[1] ? (
+    <Marker position={position} />
+  ) : null;
+}
 
 const durationMinutes = 120;
 const formatAddress = (item) => [item.houseNo, item.street, item.landmark, item.city, item.state, item.pincode].filter(Boolean).join(', ');
@@ -34,6 +67,7 @@ export default function BookingPage() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [selectedService, setSelectedService] = useState(null);
   const [serviceType, setServiceType] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
@@ -41,6 +75,23 @@ export default function BookingPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [savedAddresses, setSavedAddresses] = useState([]);
+
+  const [latitude, setLatitude] = useState(23.259933);
+  const [longitude, setLongitude] = useState(77.412613);
+  const [mapCenter, setMapCenter] = useState([23.259933, 77.412613]);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLatitude(pos.coords.latitude);
+          setLongitude(pos.coords.longitude);
+          setMapCenter([pos.coords.latitude, pos.coords.longitude]);
+        },
+        (err) => console.log('Geolocation failed', err)
+      );
+    }
+  }, []);
 
   const dates = useMemo(() => {
     const today = new Date();
@@ -80,8 +131,9 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (!providerId || !selectedDate) return;
-    fetchSlots(selectedDate);
-  }, [providerId, selectedDate]);
+    const duration = selectedService ? selectedService.duration : durationMinutes;
+    fetchSlots(selectedDate, duration);
+  }, [providerId, selectedDate, selectedService]);
 
   const fetchProviderDetails = async () => {
     try {
@@ -90,8 +142,26 @@ export default function BookingPage() {
       const res = await providersApi.details(providerId);
       const nextProvider = res.data.data.provider;
       setProvider(nextProvider);
-      setServiceType(nextProvider.category);
       setSelectedDate(dates[0]?.value || '');
+
+      const activeServices = nextProvider.services?.filter(s => s.isActive) || [];
+      const queryServiceId = searchParams.get('serviceId');
+      
+      let initialService = null;
+      if (queryServiceId && activeServices.length > 0) {
+        initialService = activeServices.find(s => s._id === queryServiceId);
+      }
+      if (!initialService && activeServices.length > 0) {
+        initialService = activeServices[0];
+      }
+
+      if (initialService) {
+        setSelectedService(initialService);
+        setServiceType(initialService.title);
+      } else {
+        setSelectedService(null);
+        setServiceType(nextProvider.category);
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to load provider.');
     } finally {
@@ -99,11 +169,11 @@ export default function BookingPage() {
     }
   };
 
-  const fetchSlots = async (date) => {
+  const fetchSlots = async (date, duration) => {
     try {
       setSlotsLoading(true);
       setSelectedSlot(null);
-      const res = await availabilityApi.slots(providerId, { date, durationMinutes });
+      const res = await availabilityApi.slots(providerId, { date, durationMinutes: duration });
       setSlots(res.data.data.slots || []);
     } catch (err) {
       setSlots([]);
@@ -133,7 +203,9 @@ export default function BookingPage() {
         address,
         amount: totalDue,
         paymentMethod: paymentMethod === 'cash' ? 'cash' : 'razorpay',
-        notes
+        notes,
+        latitude,
+        longitude
       };
 
       const bookingRes = await bookingsApi.create(payload);
@@ -219,9 +291,12 @@ export default function BookingPage() {
 
   const name = provider.userId?.name || provider.fullName || 'Provider';
   const avatarUrl = provider.userId?.avatar || `https://ui-avatars.com/api/?name=${name}&background=4F46E5&color=fff&size=512`;
-  const rate = provider.hourlyRate || 0;
-  const estimatedHours = durationMinutes / 60;
-  const baseFee = rate * estimatedHours;
+  
+  const isCustomService = !!selectedService;
+  const rate = isCustomService ? selectedService.price : (provider.hourlyRate || 0);
+  const duration = isCustomService ? selectedService.duration : durationMinutes;
+  const estimatedHours = duration / 60;
+  const baseFee = isCustomService ? selectedService.price : (rate * estimatedHours);
   const processingFee = Math.round(baseFee * 0.08 * 100) / 100;
   const totalDue = baseFee + processingFee;
 
@@ -257,7 +332,28 @@ export default function BookingPage() {
                   </div>
                   <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Service Details</h2>
                 </div>
-                <input readOnly value={serviceType} className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl capitalize" />
+                {provider.services && provider.services.filter(s => s.isActive).length > 0 ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-500 dark:text-slate-400">Select Service Offering</label>
+                    <select
+                      value={selectedService?._id || ''}
+                      onChange={(e) => {
+                        const s = provider.services.find(item => item._id === e.target.value);
+                        setSelectedService(s);
+                        setServiceType(s ? s.title : provider.category);
+                      }}
+                      className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl capitalize font-bold outline-none focus:ring-2 focus:ring-indigo-600"
+                    >
+                      {provider.services.filter(s => s.isActive).map(s => (
+                        <option key={s._id} value={s._id}>
+                          {s.title} ({formatCurrency(s.price)} - {s.duration} mins)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <input readOnly value={serviceType} className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl capitalize outline-none" />
+                )}
               </section>
 
               <section className="bg-white dark:bg-slate-800 p-8 rounded-3xl space-y-6 shadow-sm border border-slate-100 dark:border-slate-700">
@@ -309,6 +405,34 @@ export default function BookingPage() {
                 </div>
                 {savedAddresses.length > 0 && <select value={address} onChange={(e) => setAddress(e.target.value)} className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"><option value="">Select a saved address</option>{savedAddresses.map((item) => <option key={item._id} value={formatAddress(item)}>{item.fullName}: {formatAddress(item)}</option>)}</select>}
                 <input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full h-14 px-5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 placeholder:text-slate-400 transition-all" placeholder="Full service address" type="text" required />
+                
+                <div className="space-y-3 pt-2">
+                  <label className="text-sm font-semibold text-slate-500 dark:text-slate-400 block">Pin Location on Map (Required for Live Tracking)</label>
+                  <div className="w-full h-64 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative z-10">
+                    <MapContainer
+                      center={mapCenter}
+                      zoom={14}
+                      className="w-full h-full"
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <LocationMarker
+                        position={[latitude, longitude]}
+                        setPosition={(pos) => {
+                          setLatitude(pos[0]);
+                          setLongitude(pos[1]);
+                        }}
+                      />
+                      <MapRecenter center={[latitude, longitude]} />
+                    </MapContainer>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[14px] text-indigo-600">info</span>
+                    Selected Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)} (Click anywhere on the map to place the pin)
+                  </div>
+                </div>
               </section>
 
               <section className="bg-white dark:bg-slate-800 p-8 rounded-3xl space-y-6 shadow-sm border border-slate-100 dark:border-slate-700">
