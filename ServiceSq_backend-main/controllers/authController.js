@@ -17,6 +17,12 @@ const {
 
 const sendOtp = asyncHandler(async (req, res) => {
   const phone = normalizePhone(req.body.phone);
+  const adminPhone = normalizePhone(process.env.ADMIN_PHONE);
+
+  if (!req.isSuperAdminLogin && adminPhone && phone === adminPhone) {
+    throw new AppError("Please use the Super Admin login option for this account.", 403);
+  }
+
   const otp = generateOtp();
   const otpHash = await hashOtp(otp);
   const expiresAt = getOtpExpiry();
@@ -49,6 +55,46 @@ const sendOtp = asyncHandler(async (req, res) => {
   }
 
   return sendSuccess(res, 200, "OTP sent successfully.", data);
+});
+
+const ensureConfiguredAdminAccount = async ({ phone, email }) => {
+  return User.findOneAndUpdate(
+    { phone },
+    {
+      name: process.env.ADMIN_NAME || "Service Square Super Admin",
+      email,
+      phone,
+      role: "admin",
+      isVerified: true,
+      isActive: true,
+      deletedAt: null
+    },
+    { new: true, upsert: true, runValidators: true }
+  );
+};
+
+const sendSuperAdminOtp = asyncHandler(async (req, res, next) => {
+  const configuredPhone = normalizePhone(process.env.ADMIN_PHONE);
+  const configuredEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const requestedPhone = normalizePhone(req.body.phone);
+  const requestedEmail = String(req.body.email || "").trim().toLowerCase();
+
+  if (!configuredPhone || !configuredEmail) {
+    throw new AppError("Super admin login is not configured.", 503);
+  }
+
+  if (requestedPhone !== configuredPhone || requestedEmail !== configuredEmail) {
+    throw new AppError("Super admin credentials do not match the configured account.", 403);
+  }
+
+  await ensureConfiguredAdminAccount({
+    phone: configuredPhone,
+    email: configuredEmail
+  });
+
+  req.body.phone = requestedPhone;
+  req.isSuperAdminLogin = true;
+  return sendOtp(req, res, next);
 });
 
 const verifyOtp = asyncHandler(async (req, res) => {
@@ -86,7 +132,14 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
   let user = await User.findOne({ phone });
 
+  const adminPhone = normalizePhone(process.env.ADMIN_PHONE);
+  const adminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+
   if (!user) {
+    if (adminPhone && phone === adminPhone) {
+      throw new AppError("Super admin account is not configured correctly.", 403);
+    }
+
     user = await User.create({
       phone,
       role: "customer",
@@ -98,6 +151,13 @@ const verifyOtp = asyncHandler(async (req, res) => {
     }
 
     user.isVerified = true;
+
+    if (adminPhone && phone === adminPhone) {
+      if (user.role !== "admin" || String(user.email || "").toLowerCase() !== adminEmail) {
+        throw new AppError("Super admin account does not match the configured ADMIN details.", 403);
+      }
+    }
+
     await user.save();
   }
 
@@ -210,6 +270,7 @@ const logout = asyncHandler(async (req, res) => {
 
 module.exports = {
   sendOtp,
+  sendSuperAdminOtp,
   verifyOtp,
   register,
   getProfile,

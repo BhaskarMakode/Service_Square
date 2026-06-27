@@ -99,9 +99,27 @@ const deleteAddress = asyncHandler(async (req, res) => {
   });
 });
 
+const setDefaultAddress = asyncHandler(async (req, res) => {
+  const address = await Address.findOne({ _id: req.params.id, userId: req.user._id });
+
+  if (!address) {
+    throw new AppError("Address not found.", 404);
+  }
+
+  await Address.updateMany(
+    { userId: req.user._id, _id: { $ne: address._id }, isDefault: true },
+    { isDefault: false }
+  );
+  address.isDefault = true;
+  await address.save();
+
+  return sendSuccess(res, 200, "Default address updated successfully.", { address });
+});
+
 module.exports = {
   addAddress,
   deleteAddress,
   getAddresses,
+  setDefaultAddress,
   updateAddress
 };

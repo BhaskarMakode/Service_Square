@@ -5,6 +5,7 @@ const {
   getProviderPortfolio
 } = require("../controllers/portfolioController");
 const protect = require("../middleware/auth");
+const requireApprovedProvider = require("../middleware/approvedProvider");
 const authorizeRoles = require("../middleware/role");
 const { portfolioImageUpload } = require("../middleware/upload");
 const validate = require("../middleware/validate");
@@ -21,12 +22,13 @@ router.post(
   "/add",
   protect,
   authorizeRoles("provider"),
+  requireApprovedProvider,
   portfolioImageUpload.array("images", maxPortfolioImages),
   addPortfolioValidator,
   validate,
   addPortfolio
 );
 router.get("/:providerId", providerPortfolioValidator, validate, getProviderPortfolio);
-router.delete("/:id", protect, authorizeRoles("provider"), portfolioIdValidator, validate, deletePortfolio);
+router.delete("/:id", protect, authorizeRoles("provider"), requireApprovedProvider, portfolioIdValidator, validate, deletePortfolio);
 
 module.exports = router;

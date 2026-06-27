@@ -57,6 +57,10 @@ const nearbyProviderValidator = [
     .optional()
     .isFloat({ min: 0, max: 5 })
     .withMessage("minRating must be between 0 and 5."),
+  query("minPrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("minPrice must be a positive number."),
   query("maxPrice")
     .optional()
     .isFloat({ min: 0 })

@@ -1,7 +1,9 @@
 const express = require("express");
 const {
   addReview,
-  getProviderReviews
+  deleteReview,
+  getProviderReviews,
+  updateReview
 } = require("../controllers/reviewController");
 const protect = require("../middleware/auth");
 const authorizeRoles = require("../middleware/role");
@@ -127,5 +129,7 @@ router.post("/add", protect, authorizeRoles("customer"), addReviewValidator, val
  *         $ref: '#/components/responses/NotFound'
  */
 router.get("/provider/:providerId", providerReviewValidator, validate, getProviderReviews);
+router.put("/:id", protect, authorizeRoles("customer"), updateReview);
+router.delete("/:id", protect, authorizeRoles("customer", "admin"), deleteReview);
 
 module.exports = router;

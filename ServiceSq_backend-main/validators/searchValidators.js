@@ -7,7 +7,16 @@ const providerSearchValidator = [
   query("radius").optional().isFloat({ min: 0.1, max: 100 }).withMessage("radius is invalid."),
   query("category").optional().trim().notEmpty().withMessage("category cannot be empty."),
   query("minRating").optional().isFloat({ min: 0, max: 5 }).withMessage("minRating is invalid."),
+  query("minPrice").optional().isFloat({ min: 0 }).withMessage("minPrice is invalid."),
   query("maxPrice").optional().isFloat({ min: 0 }).withMessage("maxPrice is invalid."),
+  query("availabilityStatus")
+    .optional()
+    .isIn(["available", "busy", "offline"])
+    .withMessage("availabilityStatus is invalid."),
+  query("sort")
+    .optional()
+    .isIn(["relevance", "rating", "price", "priceDesc", "newest"])
+    .withMessage("sort is invalid."),
   query("page").optional().isInt({ min: 1 }).withMessage("page must be greater than 0."),
   query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be 1-100.")
 ];

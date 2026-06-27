@@ -59,11 +59,11 @@ const uploadVerificationDocument = asyncHandler(async (req, res) => {
 
   const activeVerification = await Verification.findOne({
     providerId: provider._id,
-    verificationStatus: { $in: ["pending", "approved"] }
+    verificationStatus: "approved"
   });
 
   if (activeVerification) {
-    throw new AppError("A verification request is already pending or approved.", 409);
+    throw new AppError("This provider is already approved.", 409);
   }
 
   const upload = await createVerificationUpload({ req, provider, file });

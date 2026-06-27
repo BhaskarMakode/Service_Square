@@ -32,6 +32,19 @@ const providerAvailabilityValidator = [
     .withMessage("provider id must be a valid MongoDB ObjectId.")
 ];
 
+const providerSlotsValidator = [
+  param("id")
+    .isMongoId()
+    .withMessage("provider id must be a valid MongoDB ObjectId."),
+  query("date")
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage("date must be an ISO date in YYYY-MM-DD format."),
+  query("durationMinutes")
+    .optional()
+    .isInt({ min: 30, max: 480 })
+    .withMessage("durationMinutes must be between 30 and 480.")
+];
+
 const onlineProvidersValidator = [
   query("latitude")
     .optional()
@@ -63,6 +76,7 @@ const onlineProvidersValidator = [
 module.exports = {
   onlineProvidersValidator,
   providerAvailabilityValidator,
+  providerSlotsValidator,
   toggleAvailabilityValidator,
   workingHourValidator
 };

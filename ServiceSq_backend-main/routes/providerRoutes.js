@@ -6,6 +6,8 @@ const {
   updateProfile
 } = require("../controllers/providerController");
 const protect = require("../middleware/auth");
+const requireApprovedProvider = require("../middleware/approvedProvider");
+const optionalAuth = require("../middleware/optionalAuth");
 const authorizeRoles = require("../middleware/role");
 const validate = require("../middleware/validate");
 const {
@@ -257,7 +259,7 @@ router.get("/nearby", nearbyProviderValidator, validate, getNearbyProviders);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-router.get("/:id", providerIdValidator, validate, getProviderById);
+router.get("/:id", optionalAuth, providerIdValidator, validate, getProviderById);
 
 /**
  * @openapi
@@ -313,6 +315,7 @@ router.put(
   "/update-profile",
   protect,
   authorizeRoles("provider"),
+  requireApprovedProvider,
   updateProviderValidator,
   validate,
   updateProfile

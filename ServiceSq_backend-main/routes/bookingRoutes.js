@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   createBooking,
+  getAllBookings,
   getBookingById,
   getMyBookings,
   updateBookingStatus
@@ -127,6 +128,7 @@ router.post("/create", authorizeRoles("customer"), createBookingValidator, valid
  *         $ref: '#/components/responses/Unauthorized'
  */
 router.get("/my-bookings", listBookingsValidator, validate, getMyBookings);
+router.get("/all", authorizeRoles("admin"), listBookingsValidator, validate, getAllBookings);
 
 /**
  * @openapi

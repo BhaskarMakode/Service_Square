@@ -79,7 +79,31 @@ const getProviderReviews = asyncHandler(async (req, res) => {
   });
 });
 
+const updateReview = asyncHandler(async (req, res) => {
+  const review = await Review.findOne({ _id: req.params.id, customerId: req.user._id });
+  if (!review) throw new AppError("Review not found or cannot be edited.", 404);
+  if (req.body.rating !== undefined) review.rating = Number(req.body.rating);
+  if (req.body.comment !== undefined) review.comment = req.body.comment;
+  await review.save();
+  await refreshProviderRating(review.providerId);
+  await review.populate("customerId", "name avatar");
+  return sendSuccess(res, 200, "Review updated successfully.", { review });
+});
+
+const deleteReview = asyncHandler(async (req, res) => {
+  const filter = { _id: req.params.id };
+  if (req.user.role !== "admin") filter.customerId = req.user._id;
+  const review = await Review.findOne(filter);
+  if (!review) throw new AppError("Review not found or cannot be deleted.", 404);
+  const providerId = review.providerId;
+  await review.deleteOne();
+  await refreshProviderRating(providerId);
+  return sendSuccess(res, 200, "Review deleted successfully.", { deletedReviewId: req.params.id });
+});
+
 module.exports = {
   addReview,
+  deleteReview,
+  updateReview,
   getProviderReviews
 };

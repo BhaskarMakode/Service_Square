@@ -5,6 +5,7 @@ const {
   upgradeSubscription
 } = require("../controllers/subscriptionController");
 const protect = require("../middleware/auth");
+const requireApprovedProvider = require("../middleware/approvedProvider");
 const authorizeRoles = require("../middleware/role");
 const validate = require("../middleware/validate");
 const { upgradeSubscriptionValidator } = require("../validators/subscriptionValidators");
@@ -15,11 +16,12 @@ router.post(
   "/upgrade",
   protect,
   authorizeRoles("provider"),
+  requireApprovedProvider,
   upgradeSubscriptionValidator,
   validate,
   upgradeSubscription
 );
 router.get("/plans", getSubscriptionPlans);
-router.get("/status", protect, authorizeRoles("provider"), getSubscriptionStatus);
+router.get("/status", protect, authorizeRoles("provider"), requireApprovedProvider, getSubscriptionStatus);
 
 module.exports = router;

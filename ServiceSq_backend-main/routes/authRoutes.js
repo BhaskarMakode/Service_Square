@@ -5,6 +5,7 @@ const {
   refreshToken,
   register,
   sendOtp,
+  sendSuperAdminOtp,
   verifyOtp
 } = require("../controllers/authController");
 const protect = require("../middleware/auth");
@@ -14,6 +15,7 @@ const {
   refreshTokenValidator,
   registerValidator,
   sendOtpValidator,
+  superAdminOtpValidator,
   verifyOtpValidator
 } = require("../validators/authValidators");
 
@@ -83,6 +85,7 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ApiError'
  */
 router.post("/send-otp", otpLimiter, sendOtpValidator, validate, sendOtp);
+router.post("/super-admin/send-otp", otpLimiter, superAdminOtpValidator, validate, sendSuperAdminOtp);
 
 /**
  * @openapi

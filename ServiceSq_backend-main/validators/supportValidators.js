@@ -7,12 +7,12 @@ const createTicketValidator = [
     .withMessage("subject is required.")
     .isLength({ max: 150 })
     .withMessage("subject must be at most 150 characters."),
-  body("issue")
-    .trim()
-    .notEmpty()
-    .withMessage("issue is required.")
-    .isLength({ max: 3000 })
-    .withMessage("issue must be at most 3000 characters."),
+  body().custom((value) => {
+    const issue = value.issue || value.description;
+    if (!issue || !String(issue).trim()) throw new Error("issue is required.");
+    if (String(issue).trim().length > 3000) throw new Error("issue must be at most 3000 characters.");
+    return true;
+  }),
   body("priority")
     .optional()
     .isIn(["low", "medium", "high", "urgent"])

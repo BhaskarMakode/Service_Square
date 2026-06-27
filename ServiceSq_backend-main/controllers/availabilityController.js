@@ -1,4 +1,5 @@
 const Availability = require("../models/Availability");
+const Booking = require("../models/Booking");
 const ProviderProfile = require("../models/ProviderProfile");
 const AppError = require("../utils/AppError");
 const auditLog = require("../utils/auditLogger");
@@ -88,6 +89,69 @@ const getProviderAvailability = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, "Provider availability fetched successfully.", {
     provider,
     availability
+  });
+});
+
+const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+const getProviderSlots = asyncHandler(async (req, res) => {
+  const provider = await ProviderProfile.findById(req.params.id).select(
+    "availabilityStatus verificationStatus"
+  );
+
+  if (!provider) {
+    throw new AppError("Provider profile not found.", 404);
+  }
+
+  if (provider.verificationStatus !== "approved") {
+    throw new AppError("Provider is not verified yet.", 409);
+  }
+
+  const availability = await Availability.findOne({ providerId: provider._id });
+  const date = new Date(`${req.query.date}T00:00:00`);
+  const durationMinutes = Number(req.query.durationMinutes || 120);
+  const day = WEEKDAYS[date.getDay()];
+  const workingHours = (availability && availability.workingHours || []).filter((item) => item.day === day);
+  const bookings = await Booking.find({
+    providerId: provider._id,
+    status: { $in: ["pending", "accepted"] },
+    scheduledStart: { $lt: new Date(`${req.query.date}T23:59:59.999`) },
+    scheduledEnd: { $gt: date }
+  }).select("scheduledStart scheduledEnd");
+
+  const overlapsBooking = (start, end) => bookings.some((booking) => (
+    booking.scheduledStart < end && booking.scheduledEnd > start
+  ));
+
+  const slots = [];
+  workingHours.forEach((window) => {
+    const [startHour, startMinute] = window.startTime.split(":").map(Number);
+    const [endHour, endMinute] = window.endTime.split(":").map(Number);
+    let cursor = new Date(date);
+    cursor.setHours(startHour, startMinute, 0, 0);
+
+    const windowEnd = new Date(date);
+    windowEnd.setHours(endHour, endMinute, 0, 0);
+
+    while (cursor.getTime() + durationMinutes * 60000 <= windowEnd.getTime()) {
+      const slotStart = new Date(cursor);
+      const slotEnd = new Date(cursor.getTime() + durationMinutes * 60000);
+      if (slotStart > new Date() && !overlapsBooking(slotStart, slotEnd)) {
+        slots.push({
+          start: slotStart.toISOString(),
+          end: slotEnd.toISOString(),
+          label: slotStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+        });
+      }
+      cursor = new Date(cursor.getTime() + 30 * 60000);
+    }
+  });
+
+  return sendSuccess(res, 200, "Available slots fetched successfully.", {
+    providerId: provider._id,
+    date: req.query.date,
+    durationMinutes,
+    slots
   });
 });
 
@@ -196,6 +260,7 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
 module.exports = {
   getOnlineProviders,
   getProviderAvailability,
+  getProviderSlots,
   toggleAvailability,
   updateWorkingHours
 };

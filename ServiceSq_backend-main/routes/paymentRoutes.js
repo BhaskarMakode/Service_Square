@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   createPaymentIntent,
+  getAllPayments,
   getPaymentHistory,
   getProviderEarnings,
   verifyPayment
@@ -26,7 +27,13 @@ router.post(
   createPaymentIntent
 );
 router.post("/verify", authorizeRoles("customer"), verifyPaymentValidator, validate, verifyPayment);
+router.get("/admin/all", authorizeRoles("admin"), paymentHistoryValidator, validate, getAllPayments);
 router.get("/history", paymentHistoryValidator, validate, getPaymentHistory);
 router.get("/provider-earnings", authorizeRoles("provider"), getProviderEarnings);
+
+// Public (authenticated) endpoint — returns Razorpay publishable key for the frontend
+router.get("/razorpay-key", (req, res) => {
+  res.json({ success: true, data: { key: process.env.RAZORPAY_KEY_ID || "" } });
+});
 
 module.exports = router;

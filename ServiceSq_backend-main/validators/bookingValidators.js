@@ -30,7 +30,11 @@ const createBookingValidator = [
     .withMessage("address is required."),
   body("amount")
     .isFloat({ min: 0 })
-    .withMessage("amount must be a positive number.")
+    .withMessage("amount must be a positive number."),
+  body("paymentMethod")
+    .optional()
+    .isIn(["cash", "razorpay", "mock"])
+    .withMessage("paymentMethod must be cash, razorpay, or mock.")
 ];
 
 const updateBookingStatusValidator = [

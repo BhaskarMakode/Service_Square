@@ -58,6 +58,16 @@ const bookingSchema = new mongoose.Schema(
       default: "unpaid",
       index: true
     },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "razorpay", "mock"],
+      default: "cash",
+      index: true
+    },
+    cashCollectedAt: {
+      type: Date,
+      default: null
+    },
     paymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment"

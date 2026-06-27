@@ -11,21 +11,24 @@ const {
   recordSearch
 } = require("../services/searchHistoryService");
 
+// ✅ FIX: Left outer join — providers WITHOUT an availability record are still shown.
+// Previously used $unwind which silently dropped new approved providers.
 const availabilityStages = [
   {
     $lookup: {
       from: "availabilities",
       localField: "_id",
       foreignField: "providerId",
-      as: "availability"
+      as: "availabilityArr"
     }
   },
-  { $unwind: "$availability" },
   {
-    $match: {
-      "availability.isOnline": true,
-      "availability.isAvailable": true
+    $addFields: {
+      availability: { $ifNull: [{ $arrayElemAt: ["$availabilityArr", 0] }, {}] }
     }
+  },
+  {
+    $unset: "availabilityArr"
   }
 ];
 
@@ -50,16 +53,38 @@ const publicLookupStages = [
 ];
 
 const buildProviderMatch = (query) => {
-  const match = {
-    verificationStatus: "approved",
-    availabilityStatus: "available"
-  };
+  // Always only show approved providers
+  const match = { verificationStatus: "approved" };
+
+  // Only filter by availabilityStatus if explicitly passed and not empty
+  if (query.availabilityStatus && query.availabilityStatus !== "all") {
+    match.availabilityStatus = query.availabilityStatus;
+  }
 
   if (query.category) match.category = slugify(query.category);
-  if (query.minRating !== undefined) match.rating = { $gte: Number(query.minRating) };
-  if (query.maxPrice !== undefined) match.hourlyRate = { $lte: Number(query.maxPrice) };
+  if (query.minRating !== undefined && query.minRating !== "") {
+    match.rating = { $gte: Number(query.minRating) };
+  }
+  if (query.minPrice !== undefined && query.minPrice !== "") {
+    match.hourlyRate = match.hourlyRate || {};
+    match.hourlyRate.$gte = Number(query.minPrice);
+  }
+  if (query.maxPrice !== undefined && query.maxPrice !== "") {
+    match.hourlyRate = match.hourlyRate || {};
+    match.hourlyRate.$lte = Number(query.maxPrice);
+  }
 
   return match;
+};
+
+const buildProviderSort = (query, hasLocation, hasTextSearch) => {
+  if (query.sort === "rating") return { rating: -1, reviewsCount: -1, hourlyRate: 1 };
+  if (query.sort === "price") return { hourlyRate: 1, rating: -1 };
+  if (query.sort === "priceDesc") return { hourlyRate: -1, rating: -1 };
+  if (query.sort === "newest") return { createdAt: -1 };
+  if (hasLocation) return { distanceMeters: 1, rating: -1, reviewsCount: -1 };
+  if (hasTextSearch) return { textScore: -1, rating: -1, reviewsCount: -1 };
+  return { rating: -1, reviewsCount: -1, hourlyRate: 1 };
 };
 
 const searchProviders = asyncHandler(async (req, res) => {
@@ -72,10 +97,7 @@ const searchProviders = asyncHandler(async (req, res) => {
   const pipeline = [];
 
   if (req.user && q) {
-    await recordSearch({
-      userId: req.user._id,
-      keyword: q
-    });
+    await recordSearch({ userId: req.user._id, keyword: q });
   }
 
   if (latitude !== undefined && longitude !== undefined) {
@@ -114,10 +136,7 @@ const searchProviders = asyncHandler(async (req, res) => {
 
   pipeline.push(...availabilityStages);
   pipeline.push({
-    $sort:
-      latitude !== undefined && longitude !== undefined
-        ? { distanceMeters: 1, rating: -1, reviewsCount: -1 }
-        : { textScore: -1, rating: -1, reviewsCount: -1 }
+    $sort: buildProviderSort(req.query, latitude !== undefined && longitude !== undefined, Boolean(q))
   });
   pipeline.push({
     $facet: {
@@ -139,12 +158,7 @@ const getTrendingProviders = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
 
   const [result = { metadata: [], providers: [] }] = await ProviderProfile.aggregate([
-    {
-      $match: {
-        verificationStatus: "approved",
-        availabilityStatus: "available"
-      }
-    },
+    { $match: { verificationStatus: "approved" } },
     ...availabilityStages,
     {
       $lookup: {
@@ -166,7 +180,11 @@ const getTrendingProviders = asyncHandler(async (req, res) => {
           }
         },
         trendScore: {
-          $add: [{ $multiply: ["$rating", 10] }, "$reviewsCount", { $size: "$bookings" }]
+          $add: [
+            { $multiply: ["$rating", 10] },
+            "$reviewsCount",
+            { $size: "$bookings" }
+          ]
         }
       }
     },
@@ -191,10 +209,7 @@ const getRecommendedProviders = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const bookings = await Booking.find({ customerId: req.user._id }).select("serviceType");
   const categories = [...new Set(bookings.map((booking) => booking.serviceType))];
-  const match = {
-    verificationStatus: "approved",
-    availabilityStatus: "available"
-  };
+  const match = { verificationStatus: "approved" };
 
   if (categories.length > 0) {
     match.category = { $in: categories };
@@ -214,7 +229,11 @@ const getRecommendedProviders = asyncHandler(async (req, res) => {
     {
       $addFields: {
         recommendationScore: {
-          $add: [{ $multiply: ["$rating", 10] }, "$reviewsCount", { $multiply: [{ $size: "$bookings" }, 2] }]
+          $add: [
+            { $multiply: ["$rating", 10] },
+            "$reviewsCount",
+            { $multiply: [{ $size: "$bookings" }, 2] }
+          ]
         }
       }
     },
@@ -239,17 +258,12 @@ const getSearchHistory = asyncHandler(async (req, res) => {
   const limit = Math.min(Number(req.query.limit || 10), getSearchHistoryLimit(), 50);
   const searches = await SearchHistory.find({ userId: req.user._id }).sort({ searchedAt: -1 }).limit(limit);
 
-  return sendSuccess(res, 200, "Search history fetched successfully.", {
-    searches
-  });
+  return sendSuccess(res, 200, "Search history fetched successfully.", { searches });
 });
 
 const clearSearchHistory = asyncHandler(async (req, res) => {
   await SearchHistory.deleteMany({ userId: req.user._id });
-
-  return sendSuccess(res, 200, "Search history cleared successfully.", {
-    searches: []
-  });
+  return sendSuccess(res, 200, "Search history cleared successfully.", { searches: [] });
 });
 
 module.exports = {

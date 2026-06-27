@@ -1,6 +1,7 @@
 const Availability = require("../models/Availability");
 const Category = require("../models/Category");
 const ProviderProfile = require("../models/ProviderProfile");
+const Upload = require("../models/Upload");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
 const { sendSuccess } = require("../utils/apiResponse");
@@ -60,10 +61,12 @@ const populateProvider = async (provider) => {
   ]);
 
   const availability = await Availability.findOne({ providerId: provider._id });
+  const uploads = await Upload.find({ providerId: provider._id });
 
   return {
     ...provider.toObject(),
-    availability
+    availability,
+    uploads
   };
 };
 
@@ -235,6 +238,13 @@ const getProviderById = asyncHandler(async (req, res) => {
   const provider = await ProviderProfile.findById(req.params.id);
 
   if (!provider) {
+    throw new AppError("Provider profile not found.", 404);
+  }
+
+  const isAdmin = req.user && req.user.role === "admin";
+  const isOwner = req.user && provider.userId.toString() === req.user._id.toString();
+
+  if (provider.verificationStatus !== "approved" && !isAdmin && !isOwner) {
     throw new AppError("Provider profile not found.", 404);
   }
 

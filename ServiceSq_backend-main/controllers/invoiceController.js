@@ -156,7 +156,22 @@ const getInvoiceHistory = asyncHandler(async (req, res) => {
   });
 });
 
+const getAllInvoices = asyncHandler(async (req, res) => {
+  const { page, limit, skip } = getPagination(req.query);
+
+  const [invoices, total] = await Promise.all([
+    Invoice.find({}).sort({ generatedAt: -1 }).skip(skip).limit(limit).populate(invoicePopulation),
+    Invoice.countDocuments({})
+  ]);
+
+  return sendSuccess(res, 200, "All invoices fetched successfully.", {
+    invoices,
+    pagination: buildPagination({ page, limit, total })
+  });
+});
+
 module.exports = {
+  getAllInvoices,
   getInvoiceByBooking,
   getInvoiceHistory
 };

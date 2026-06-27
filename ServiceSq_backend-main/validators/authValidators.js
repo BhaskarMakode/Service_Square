@@ -10,6 +10,15 @@ const sendOtpValidator = [
   phoneValidator()
 ];
 
+const superAdminOtpValidator = [
+  phoneValidator(),
+  body("email")
+    .trim()
+    .isEmail()
+    .withMessage("email must be valid.")
+    .normalizeEmail()
+];
+
 const verifyOtpValidator = [
   phoneValidator(),
   body("otp")
@@ -54,6 +63,7 @@ const refreshTokenValidator = [
 module.exports = {
   refreshTokenValidator,
   sendOtpValidator,
+  superAdminOtpValidator,
   verifyOtpValidator,
   registerValidator
 };

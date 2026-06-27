@@ -32,6 +32,15 @@ const verifyProviderValidator = [
     .withMessage("rejectionReason must be at most 500 characters.")
 ];
 
+const providerDecisionValidator = [
+  param("id").isMongoId().withMessage("provider id must be valid."),
+  body("rejectionReason")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("rejectionReason must be at most 500 characters.")
+];
+
 const deleteUserValidator = [
   param("id").isMongoId().withMessage("user id must be valid.")
 ];
@@ -40,5 +49,6 @@ module.exports = {
   deleteUserValidator,
   listAdminProvidersValidator,
   listUsersValidator,
+  providerDecisionValidator,
   verifyProviderValidator
 };

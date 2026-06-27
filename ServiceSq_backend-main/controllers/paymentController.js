@@ -90,7 +90,12 @@ const createPaymentIntent = asyncHandler(async (req, res) => {
   return sendSuccess(res, 201, "Payment intent created successfully.", {
     payment,
     paymentId: payment._id,
-    clientSecret: gatewayIntent.clientSecret
+    clientSecret: gatewayIntent.clientSecret,
+    gateway: {
+      provider: gatewayIntent.isRazorpay ? "razorpay" : "mock",
+      orderId: gatewayIntent.razorpayOrderId || gatewayIntent.paymentIntentId,
+      currency: gatewayIntent.currency
+    }
   });
 });
 
@@ -186,6 +191,25 @@ const getPaymentHistory = asyncHandler(async (req, res) => {
   });
 });
 
+const getAllPayments = asyncHandler(async (req, res) => {
+  const { page, limit, skip } = getPagination(req.query);
+  const filter = {};
+
+  if (req.query.paymentStatus) {
+    filter.paymentStatus = req.query.paymentStatus;
+  }
+
+  const [payments, total] = await Promise.all([
+    Payment.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(paymentPopulation),
+    Payment.countDocuments(filter)
+  ]);
+
+  return sendSuccess(res, 200, "All payments fetched successfully.", {
+    payments,
+    pagination: buildPagination({ page, limit, total })
+  });
+});
+
 const getProviderEarnings = asyncHandler(async (req, res) => {
   const provider = await ProviderProfile.findOne({ userId: req.user._id });
 
@@ -224,6 +248,7 @@ const getProviderEarnings = asyncHandler(async (req, res) => {
 
 module.exports = {
   createPaymentIntent,
+  getAllPayments,
   getPaymentHistory,
   getProviderEarnings,
   verifyPayment

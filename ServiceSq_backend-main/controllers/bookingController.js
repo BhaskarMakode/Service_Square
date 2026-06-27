@@ -1,11 +1,13 @@
 const Booking = require("../models/Booking");
 const Availability = require("../models/Availability");
+const Payment = require("../models/Payment");
 const ProviderProfile = require("../models/ProviderProfile");
 const AppError = require("../utils/AppError");
 const auditLog = require("../utils/auditLogger");
 const asyncHandler = require("../utils/asyncHandler");
 const { sendSuccess } = require("../utils/apiResponse");
 const { createNotification } = require("../services/notificationService");
+const { getCommission } = require("../services/paymentService");
 const {
   assertValidSchedule,
   assertValidStatusTransition,
@@ -60,6 +62,7 @@ const createBooking = asyncHandler(async (req, res) => {
     scheduledEnd: end
   });
 
+  const paymentMethod = req.body.paymentMethod || "cash";
   const booking = await Booking.create({
     customerId: req.user._id,
     providerId: provider._id,
@@ -69,8 +72,30 @@ const createBooking = asyncHandler(async (req, res) => {
     scheduledEnd: end,
     address: req.body.address,
     amount: Number(req.body.amount),
-    status: "pending"
+    status: "pending",
+    paymentMethod,
+    paymentStatus: paymentMethod === "cash" ? "unpaid" : "pending"
   });
+
+  if (paymentMethod === "cash") {
+    const commission = getCommission(booking.amount);
+    const payment = await Payment.create({
+      bookingId: booking._id,
+      customerId: booking.customerId,
+      providerId: booking.providerId,
+      amount: booking.amount,
+      currency: process.env.PAYMENT_CURRENCY || "INR",
+      paymentMethod: "cash",
+      paymentStatus: "pending",
+      paymentIntentId: `cash_${booking._id}`,
+      clientSecretHash: `cash_${booking._id}`,
+      commissionAmount: commission.commissionAmount,
+      providerEarning: commission.providerEarning
+    });
+
+    booking.paymentId = payment._id;
+    await booking.save();
+  }
 
   const populatedBooking = await Booking.findById(booking._id).populate(bookingPopulation);
 
@@ -140,6 +165,36 @@ const getMyBookings = asyncHandler(async (req, res) => {
   });
 });
 
+const getAllBookings = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page || 1);
+  const limit = Math.min(Number(req.query.limit || 10), 100);
+  const skip = (page - 1) * limit;
+  const filter = {};
+
+  if (req.query.status) {
+    filter.status = req.query.status;
+  }
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .sort({ scheduledStart: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate(bookingPopulation),
+    Booking.countDocuments(filter)
+  ]);
+
+  return sendSuccess(res, 200, "All bookings fetched successfully.", {
+    bookings,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  });
+});
+
 const updateBookingStatus = asyncHandler(async (req, res) => {
   const booking = await Booking.findById(req.params.id);
 
@@ -167,6 +222,10 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
       throw new AppError("You are not allowed to update this booking.", 403);
     }
 
+    if (provider.verificationStatus !== "approved") {
+      throw new AppError("Provider approval is required before managing bookings.", 403);
+    }
+
     if (!["accepted", "rejected", "completed"].includes(nextStatus)) {
       throw new AppError("Providers can only accept, reject, or complete bookings.", 403);
     }
@@ -182,6 +241,18 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   }
 
   booking.status = nextStatus;
+  if (nextStatus === "completed" && booking.paymentMethod === "cash") {
+    const payment = await Payment.findOne({ bookingId: booking._id });
+    if (payment && payment.paymentStatus !== "succeeded") {
+      payment.paymentStatus = "succeeded";
+      payment.transactionId = payment.transactionId || `cash_paid_${booking._id}`;
+      payment.verifiedAt = new Date();
+      await payment.save();
+      booking.paymentId = payment._id;
+    }
+    booking.paymentStatus = "paid";
+    booking.cashCollectedAt = new Date();
+  }
   await booking.save();
 
   const notificationMap = {
@@ -248,6 +319,7 @@ const getBookingById = asyncHandler(async (req, res) => {
 
 module.exports = {
   createBooking,
+  getAllBookings,
   getMyBookings,
   updateBookingStatus,
   getBookingById

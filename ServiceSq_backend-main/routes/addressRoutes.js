@@ -3,6 +3,7 @@ const {
   addAddress,
   deleteAddress,
   getAddresses,
+  setDefaultAddress,
   updateAddress
 } = require("../controllers/addressController");
 const protect = require("../middleware/auth");
@@ -17,8 +18,10 @@ const router = express.Router();
 
 router.use(protect);
 
+router.post("/", requiredAddressValidator, validate, addAddress);
 router.post("/add", requiredAddressValidator, validate, addAddress);
 router.get("/", getAddresses);
+router.put("/:id/default", addressIdValidator, validate, setDefaultAddress);
 router.put("/:id", updateAddressValidator, validate, updateAddress);
 router.delete("/:id", addressIdValidator, validate, deleteAddress);
 
