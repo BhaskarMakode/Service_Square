@@ -43,11 +43,21 @@ const publicLookupStages = [
   },
   { $unwind: "$user" },
   {
+    $lookup: {
+      from: "categories",
+      localField: "categoryId",
+      foreignField: "_id",
+      as: "categoryDetails"
+    }
+  },
+  { $unwind: { path: "$categoryDetails", preserveNullAndEmptyArrays: true } },
+  {
     $project: {
       __v: 0,
       "user.phone": 0,
       "user.email": 0,
-      "user.__v": 0
+      "user.__v": 0,
+      "categoryDetails.__v": 0
     }
   }
 ];
@@ -73,14 +83,19 @@ const buildProviderMatch = (query) => {
     match.hourlyRate = match.hourlyRate || {};
     match.hourlyRate.$lte = Number(query.maxPrice);
   }
+  if (query.minExperience !== undefined && query.minExperience !== "") {
+    match.experience = { $gte: Number(query.minExperience) };
+  }
 
   return match;
 };
 
 const buildProviderSort = (query, hasLocation, hasTextSearch) => {
+  if (query.sort === "distance" || query.sort === "nearest") return hasLocation ? { distanceMeters: 1, rating: -1, reviewsCount: -1 } : { rating: -1, reviewsCount: -1, hourlyRate: 1 };
   if (query.sort === "rating") return { rating: -1, reviewsCount: -1, hourlyRate: 1 };
   if (query.sort === "price") return { hourlyRate: 1, rating: -1 };
   if (query.sort === "priceDesc") return { hourlyRate: -1, rating: -1 };
+  if (query.sort === "mostBooked") return { completedBookings: -1, rating: -1, reviewsCount: -1 };
   if (query.sort === "newest") return { createdAt: -1 };
   if (hasLocation) return { distanceMeters: 1, rating: -1, reviewsCount: -1 };
   if (hasTextSearch) return { textScore: -1, rating: -1, reviewsCount: -1 };
@@ -91,7 +106,7 @@ const searchProviders = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const latitude = toNumber(req.query.latitude);
   const longitude = toNumber(req.query.longitude);
-  const radiusKm = toNumber(req.query.radius) || 10;
+  const radiusKm = toNumber(req.query.radius) || 100;
   const q = req.query.q && String(req.query.q).trim();
   const match = buildProviderMatch(req.query);
   const pipeline = [];
@@ -101,14 +116,17 @@ const searchProviders = asyncHandler(async (req, res) => {
   }
 
   if (latitude !== undefined && longitude !== undefined) {
+    const geoNear = {
+      near: { type: "Point", coordinates: [longitude, latitude] },
+      distanceField: "distanceMeters",
+      spherical: true,
+      query: match
+    };
+    if (req.query.radius !== "anywhere") {
+      geoNear.maxDistance = radiusKm * 1000;
+    }
     pipeline.push({
-      $geoNear: {
-        near: { type: "Point", coordinates: [longitude, latitude] },
-        distanceField: "distanceMeters",
-        maxDistance: radiusKm * 1000,
-        spherical: true,
-        query: match
-      }
+      $geoNear: geoNear
     });
     pipeline.push({
       $addFields: {
@@ -135,6 +153,27 @@ const searchProviders = asyncHandler(async (req, res) => {
   }
 
   pipeline.push(...availabilityStages);
+  pipeline.push({
+    $lookup: {
+      from: "bookings",
+      localField: "_id",
+      foreignField: "providerId",
+      as: "bookings"
+    }
+  });
+  pipeline.push({
+    $addFields: {
+      completedBookings: {
+        $size: {
+          $filter: {
+            input: "$bookings",
+            as: "booking",
+            cond: { $eq: ["$$booking.status", "completed"] }
+          }
+        }
+      }
+    }
+  });
   pipeline.push({
     $sort: buildProviderSort(req.query, latitude !== undefined && longitude !== undefined, Boolean(q))
   });
