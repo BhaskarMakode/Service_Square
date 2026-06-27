@@ -33,11 +33,8 @@ export default function Signup() {
     try {
       const res = await register({ name, email, role });
       if (res.success) {
-        // Redirect based on role
         if (role === 'provider') {
-          navigate('/provider-panel');
-        } else if (role === 'admin') {
-          navigate('/admin-dashboard');
+          navigate('/onboarding-1');
         } else {
           navigate('/dashboard');
         }

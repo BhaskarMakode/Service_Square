@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
@@ -13,7 +13,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Public Pages
 import Home from './pages/Home';
 import Services from './pages/Services';
-import Booking from './pages/Booking';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Provider from './pages/Provider';
@@ -58,6 +57,14 @@ import AdminCategories from './pages/AdminCategories';
 import AdminReports from './pages/AdminReports';
 import AdminVerificationQueue from './pages/AdminVerificationQueue';
 import AdminVerificationDetail from './pages/AdminVerificationDetail';
+import AdminSupport from './pages/AdminSupport';
+import AdminUsers from './pages/AdminUsers';
+
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+  React.useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' }), [pathname, search]);
+  return null;
+}
 
 function App() {
   return (
@@ -66,6 +73,7 @@ function App() {
         <RoleProvider>
           <ToastProvider>
             <Router>
+              <ScrollToTop />
               <div className="bg-background text-on-surface font-body min-h-screen flex flex-col selection:bg-primary-fixed">
                 <Header />
                 <div className="flex-1">
@@ -73,7 +81,7 @@ function App() {
                     {/* Public Routes */}
                     <Route path="/" element={<Home />} />
                     <Route path="/services" element={<Services />} />
-                    <Route path="/booking" element={<Booking />} />
+                    <Route path="/booking" element={<BookingPage />} />
                     <Route path="/booking-page" element={<BookingPage />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
@@ -86,12 +94,13 @@ function App() {
                     <Route path="/provider-details" element={<ProviderDetails />} />
                     <Route path="/category" element={<CategoryLandingPage />} />
                     <Route path="/service-listing" element={<ServiceListing />} />
-                    
+
                     {/* Customer Protected Routes */}
                     <Route element={<ProtectedRoute allowedRoles={['Customer', 'Admin']} />}>
                       <Route path="/dashboard" element={<UserDashboard />} />
                       <Route path="/review" element={<ReviewPage />} />
                       <Route path="/tracking" element={<LiveTracking />} />
+                      <Route path="/booking-confirmation" element={<BookingConfirmation />} />
                       <Route path="/confirmation" element={<BookingConfirmation />} />
                       <Route path="/chat" element={<ChatPage />} />
                       <Route path="/address-book" element={<AddressBook />} />
@@ -100,8 +109,8 @@ function App() {
                       <Route path="/support" element={<SupportTickets />} />
                     </Route>
 
-                    {/* Provider Protected Routes */}
-                    <Route element={<ProtectedRoute allowedRoles={['Provider', 'Admin']} />}>
+                    {/* Provider Protected Routes (Approved Only) */}
+                    <Route element={<ProtectedRoute allowedRoles={['Provider', 'Admin']} requireApprovedProvider />}>
                       <Route path="/provider-panel" element={<ProviderPanel />} />
                       <Route path="/my-services" element={<MyServicesManagement />} />
                       <Route path="/add-service" element={<AddNewService />} />
@@ -109,6 +118,9 @@ function App() {
                       <Route path="/provider-availability" element={<ProviderAvailability />} />
                       <Route path="/provider-portfolio" element={<ProviderPortfolio />} />
                       <Route path="/provider-subscription" element={<ProviderSubscription />} />
+                    </Route>
+                    {/* Provider Onboarding (No approval required) */}
+                    <Route element={<ProtectedRoute allowedRoles={['Provider', 'Admin']} />}>
                       <Route path="/onboarding-1" element={<ProviderOnboardingStep1 />} />
                       <Route path="/onboarding-2" element={<ProviderOnboardingStep2 />} />
                       <Route path="/onboarding-3" element={<ProviderOnboardingStep3 />} />
@@ -125,9 +137,11 @@ function App() {
                       <Route path="/admin-verification-detail" element={<AdminVerificationDetail />} />
                       <Route path="/admin/queue" element={<AdminVerificationQueue />} />
                       <Route path="/admin/detail" element={<AdminVerificationDetail />} />
+                      <Route path="/admin-support" element={<AdminSupport />} />
+                      <Route path="/admin-users" element={<AdminUsers />} />
                     </Route>
 
-                    {/* Fallback route */}
+                    {/* Fallback */}
                     <Route path="*" element={<Home />} />
                   </Routes>
                 </div>

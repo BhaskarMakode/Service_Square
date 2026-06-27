@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import apiClient from '../services/apiClient';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import BackButton from '../components/BackButton';
+import { bookingsApi } from '../services/serviceApi';
+import { formatCurrency } from '../utils/currency';
 
 export default function BookingConfirmation() {
   const [searchParams] = useSearchParams();
-  const bookingId = searchParams.get('bookingId');
+  const location = useLocation();
+  const bookingId = searchParams.get('bookingId') || searchParams.get('id') || location.state?.bookingId;
   
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +25,7 @@ export default function BookingConfirmation() {
   const fetchBookingDetails = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get(`/bookings/${bookingId}`);
+      const res = await bookingsApi.get(bookingId);
       if (res.data.success) {
         setBooking(res.data.data.booking);
       }
@@ -78,7 +81,7 @@ export default function BookingConfirmation() {
           <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">Booking Confirmed!</h1>
           <p className="text-xl text-slate-500 dark:text-slate-400 font-medium">Your request has been accepted. We've notified your provider.</p>
           <div className="mt-6 inline-block px-4 py-2 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
-            <span className="text-sm font-bold tracking-widest text-indigo-700 dark:text-indigo-400 uppercase">Order ID: #{booking._id.slice(-6).toUpperCase()}</span>
+            <span className="text-sm font-bold tracking-widest text-indigo-700 dark:text-indigo-400 uppercase">Booking ID: #{booking._id}</span>
           </div>
         </section>
 
@@ -138,13 +141,13 @@ export default function BookingConfirmation() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Payment Status</p>
-                  <p className="font-bold text-slate-900 dark:text-white">Authorized (Not Charged)</p>
+                  <p className="font-bold text-slate-900 dark:text-white capitalize">{booking.paymentMethod === 'cash' ? 'Cash after service' : booking.paymentStatus}</p>
                 </div>
               </div>
               <div className="h-px w-full md:h-12 md:w-px bg-slate-200 dark:bg-slate-700"></div>
               <div className="text-center md:text-right">
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Amount</p>
-                <p className="text-3xl font-black text-indigo-700 dark:text-indigo-400">${booking.amount.toFixed(2)}</p>
+                <p className="text-3xl font-black text-indigo-700 dark:text-indigo-400">{formatCurrency(booking.amount)}</p>
               </div>
             </div>
           </div>
@@ -158,6 +161,7 @@ export default function BookingConfirmation() {
           <Link to="/" className="w-full sm:w-auto px-10 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] transition-all duration-200 text-center inline-block">
             Back to Home
           </Link>
+          <BackButton fallback="/dashboard" className="w-full sm:w-auto justify-center px-10 py-4" />
         </div>
       </main>
 

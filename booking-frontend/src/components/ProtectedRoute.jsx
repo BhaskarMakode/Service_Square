@@ -2,8 +2,8 @@ import React, { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
-const ProtectedRoute = ({ allowedRoles }) => {
-  const { isAuthenticated, user, isLoading } = useContext(AuthContext);
+const ProtectedRoute = ({ allowedRoles, requireApprovedProvider = false }) => {
+  const { isAuthenticated, user, providerProfile, isLoading } = useContext(AuthContext);
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -19,6 +19,10 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   if (allowedRolesLower && (!userRoleLower || !allowedRolesLower.includes(userRoleLower))) {
     return <Navigate to="/" replace />; // Or to an unauthorized page
+  }
+
+  if (requireApprovedProvider && userRoleLower === 'provider' && providerProfile?.verificationStatus !== 'approved') {
+    return <Navigate to="/verification-status" replace />;
   }
 
   return <Outlet />;

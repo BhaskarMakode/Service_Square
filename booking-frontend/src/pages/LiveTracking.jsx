@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { formatCurrency } from '../utils/currency';
 
 export default function LiveTracking() {
   const [searchParams] = useSearchParams();
-  const bookingId = searchParams.get('id');
+  const bookingId = searchParams.get('bookingId') || searchParams.get('id');
   const [booking, setBooking] = useState(null);
+  const [customerCoords, setCustomerCoords] = useState(null);
+  const [liveLocation, setLiveLocation] = useState(null);
+  const [distanceKm, setDistanceKm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -32,6 +36,33 @@ export default function LiveTracking() {
     fetchBooking();
   }, [bookingId]);
 
+  useEffect(() => {
+    if (!booking?.providerId?._id || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+        setCustomerCoords(coords);
+
+        try {
+          const res = await apiClient.get(`/location/provider/${booking.providerId._id}`, { params: coords });
+          if (res.data.success) {
+            setLiveLocation(res.data.data.liveLocation);
+            setDistanceKm(res.data.data.distanceKm);
+          }
+        } catch (err) {
+          console.warn('Live provider location unavailable, using profile location if present.', err);
+        }
+      },
+      () => {
+        setCustomerCoords(null);
+      }
+    );
+  }, [booking]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading booking details...</div>;
   }
@@ -41,6 +72,13 @@ export default function LiveTracking() {
   }
 
   const { providerId: provider, serviceType, status, address, amount, scheduledStart } = booking;
+  const providerUser = provider?.userId || {};
+  const providerName = providerUser.name || 'Assigned Provider';
+  const providerCoords = liveLocation?.location?.coordinates || provider?.location?.coordinates;
+  const hasProviderCoords = Array.isArray(providerCoords) && providerCoords.length === 2;
+  const mapsUrl = hasProviderCoords
+    ? `https://www.google.com/maps/dir/?api=1${customerCoords ? `&origin=${customerCoords.latitude},${customerCoords.longitude}` : ''}&destination=${providerCoords[1]},${providerCoords[0]}&travelmode=driving`
+    : null;
 
   return (
     <main className="relative h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col md:flex-row">
@@ -121,13 +159,13 @@ export default function LiveTracking() {
         <div className="pointer-events-auto w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-slate-100 dark:border-slate-800">
           <div className="flex items-start gap-4 mb-6">
             <div className="relative">
-              <img alt="Provider Profile" className="w-16 h-16 rounded-2xl object-cover shadow-md" src={`https://ui-avatars.com/api/?name=${provider?.fullName || 'Provider'}&background=4F46E5&color=fff`}/>
+              <img alt="Provider Profile" className="w-16 h-16 rounded-2xl object-cover shadow-md" src={providerUser.avatar || `https://ui-avatars.com/api/?name=${providerName}&background=4F46E5&color=fff`}/>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 rounded-lg flex items-center justify-center border-2 border-white dark:border-slate-900">
                 <span className="material-symbols-outlined text-[14px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white capitalize">{provider?.fullName || 'Assigned Provider'}</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white capitalize">{providerName}</h3>
               <p className="text-sm text-slate-500 capitalize">{serviceType} Professional</p>
               <div className="mt-2 flex gap-2">
                 <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 text-[10px] font-bold rounded">VERIFIED</span>
@@ -153,7 +191,18 @@ export default function LiveTracking() {
             </div>
             <p className="text-sm font-semibold text-slate-900 dark:text-white capitalize">{serviceType} Service</p>
             <p className="text-xs text-slate-500 mt-1">{address}</p>
-            <p className="text-sm font-bold text-slate-900 dark:text-white mt-2">${amount}</p>
+            {distanceKm !== null && (
+              <p className="text-xs text-indigo-600 font-bold mt-2">{distanceKm} km from your current location</p>
+            )}
+            <p className="text-sm font-bold text-slate-900 dark:text-white mt-2">{formatCurrency(amount)}</p>
+            {mapsUrl ? (
+              <a href={mapsUrl} target="_blank" rel="noreferrer" className="mt-4 flex items-center justify-center gap-2 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">
+                <span className="material-symbols-outlined text-xl">route</span>
+                Open Route in Google Maps
+              </a>
+            ) : (
+              <p className="text-xs text-slate-500 mt-4">Provider map coordinates are not available yet.</p>
+            )}
           </div>
         </div>
       </div>

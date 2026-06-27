@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function ProviderEarnings() {
   const { user } = useAuth();
@@ -10,6 +11,8 @@ export default function ProviderEarnings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [summary, setSummary] = useState({ totalRevenue: 0, totalCommission: 0, totalEarnings: 0, transactions: 0 });
 
   useEffect(() => {
     if (!user || user.role !== 'provider') {
@@ -22,10 +25,14 @@ export default function ProviderEarnings() {
   const fetchEarnings = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/bookings/my-bookings');
-      if (res.data.success) {
-        setBookings(res.data.data.bookings || []);
-      }
+      const [bookingsRes, earningsRes, paymentsRes] = await Promise.all([
+        apiClient.get('/bookings/my-bookings'),
+        apiClient.get('/payments/provider-earnings'),
+        apiClient.get('/payments/history', { params: { paymentStatus: 'succeeded', limit: 100 } })
+      ]);
+      if (bookingsRes.data.success) setBookings(bookingsRes.data.data.bookings || []);
+      if (earningsRes.data.success) setSummary(earningsRes.data.data.summary || { totalRevenue: 0, totalCommission: 0, totalEarnings: 0, transactions: 0 });
+      if (paymentsRes.data.success) setPayments(paymentsRes.data.data.payments || []);
     } catch (err) {
       setError(err.message || 'Failed to fetch earnings');
     } finally {
@@ -39,34 +46,46 @@ export default function ProviderEarnings() {
 
   // Analytics Calculations
   const completedBookings = bookings.filter(b => b.status === 'completed');
-  const allEarnedBookings = bookings.filter(b => ['completed', 'accepted'].includes(b.status)); // or just completed for actual balance
-  
-  const availableBalance = completedBookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const availableBalance = summary.totalEarnings || 0;
   
   // This month
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-  const thisMonthBookings = completedBookings.filter(b => {
-    const d = new Date(b.scheduledStart);
+  const thisMonthPayments = payments.filter(payment => {
+    const d = new Date(payment.verifiedAt || payment.updatedAt || payment.createdAt);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
-  const thisMonthEarnings = thisMonthBookings.reduce((sum, b) => sum + (b.amount || 0), 0);
-  
-  // Platform fees (mocked at 15% for display)
-  const platformFees = availableBalance * 0.15;
+  const thisMonthEarnings = thisMonthPayments.reduce((sum, payment) => sum + (payment.providerEarning || 0), 0);
+  const platformFees = summary.totalCommission || 0;
 
   // Average job value
-  const avgJobValue = completedBookings.length > 0 ? (availableBalance / completedBookings.length) : 0;
+  const avgJobValue = summary.transactions > 0 ? (availableBalance / summary.transactions) : 0;
 
   // Recent payouts
-  const payouts = completedBookings.slice(0, 10).map(b => {
-    return [
-      b.serviceType,
-      new Date(b.scheduledStart).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
-      b.status,
-      `$${b.amount.toFixed(2)}`
-    ];
+  const payouts = payments.slice(0, 10).map(payment => {
+    const booking = payment.bookingId || {};
+    return {
+      id: payment._id,
+      service: booking.serviceType || 'Service payout',
+      date: new Date(payment.verifiedAt || payment.updatedAt || payment.createdAt).toLocaleDateString('en-IN', { month: 'short', day: '2-digit' }),
+      status: payment.paymentStatus,
+      amount: formatCurrency(payment.providerEarning || 0)
+    };
   });
+
+  const trendStart = new Date();
+  trendStart.setHours(0, 0, 0, 0);
+  trendStart.setDate(trendStart.getDate() - 6);
+  const weeklyTrend = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(trendStart);
+    day.setDate(trendStart.getDate() + index);
+    const key = day.toISOString().slice(0, 10);
+    const amount = payments
+      .filter((payment) => (payment.verifiedAt || payment.updatedAt || payment.createdAt)?.slice(0, 10) === key)
+      .reduce((sum, payment) => sum + (payment.providerEarning || 0), 0);
+    return { key, label: day.toLocaleDateString('en-IN', { weekday: 'short' }).slice(0, 1), amount };
+  });
+  const maxTrend = Math.max(...weeklyTrend.map((item) => item.amount), 1);
 
   return (
     <main className="bg-slate-50 dark:bg-slate-900 min-h-screen text-slate-900 dark:text-white font-body">
@@ -99,10 +118,10 @@ export default function ProviderEarnings() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {[
-            ['Available balance', `$${availableBalance.toFixed(2)}`, 'account_balance_wallet', 'bg-indigo-600 text-white shadow-indigo-500/20'],
-            ['This month', `$${thisMonthEarnings.toFixed(2)}`, 'trending_up', 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700'],
-            ['Platform fees', `$${platformFees.toFixed(2)}`, 'receipt_long', 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700'],
-            ['Avg. job value', `$${avgJobValue.toFixed(2)}`, 'bar_chart', 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700'],
+            ['Available balance', formatCurrency(availableBalance), 'account_balance_wallet', 'bg-indigo-600 text-white shadow-indigo-500/20'],
+            ['This month', formatCurrency(thisMonthEarnings), 'trending_up', 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700'],
+            ['Platform fees', formatCurrency(platformFees), 'receipt_long', 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700'],
+            ['Avg. job value', formatCurrency(avgJobValue), 'bar_chart', 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700'],
           ].map(([label, value, icon, styleClass]) => (
             <div className={`${styleClass} rounded-2xl p-6 border shadow-sm transition-transform hover:-translate-y-1`} key={label}>
               <span className={`material-symbols-outlined mb-5 p-3 rounded-xl inline-block ${label === 'Available balance' ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'}`}>
@@ -159,18 +178,18 @@ export default function ProviderEarnings() {
               Weekly trend
             </h2>
             <div className="h-64 flex items-end gap-2 flex-1">
-              {[42, 58, 35, 76, 62, 90, 68].map((height, index) => {
-                const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                const isToday = index === 5; // mockup current day
+              {weeklyTrend.map((item, index) => {
+                const height = item.amount > 0 ? Math.max((item.amount / maxTrend) * 100, 6) : 2;
+                const isToday = item.key === new Date().toISOString().slice(0, 10);
                 return (
-                  <div className="flex-1 flex flex-col items-center gap-3 group" key={index}>
+                  <div className="flex-1 flex flex-col items-center gap-3 group" key={item.key} title={`${item.key}: ${formatCurrency(item.amount)}`}>
                     <div className="w-full relative h-full flex items-end justify-center">
                       <div 
                         className={`w-full rounded-t-lg transition-all duration-500 ${isToday ? 'bg-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-indigo-100 dark:bg-indigo-900/40 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800'}`} 
                         style={{ height: `${height}%` }}
                       ></div>
                     </div>
-                    <span className={`text-xs font-bold ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>{days[index]}</span>
+                    <span className={`text-xs font-bold ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>{item.label}</span>
                   </div>
                 )
               })}

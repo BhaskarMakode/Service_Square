@@ -7,6 +7,8 @@ export default function SupportTickets() {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchTickets();
@@ -20,7 +22,7 @@ export default function SupportTickets() {
         setHistory(response.data.data.tickets || []);
       }
     } catch (error) {
-      console.error('Failed to load tickets', error);
+      setError(error.response?.data?.message || 'Failed to load tickets.');
     } finally {
       setLoading(false);
     }
@@ -29,20 +31,21 @@ export default function SupportTickets() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!description.trim()) {
-      alert("Please enter a description.");
+      setError('Please enter a description.');
       return;
     }
     
     try {
       setSubmitting(true);
-      const res = await apiClient.post('/support/create-ticket', { subject, description });
+      setError('');
+      const res = await apiClient.post('/support/create-ticket', { subject, issue: description, priority: 'medium' });
       if (res.data.success) {
         setDescription('');
         fetchTickets(); // Refresh list
-        alert('Ticket submitted successfully!');
+        setMessage('Ticket submitted successfully.');
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to submit ticket');
+      setError(error.response?.data?.message || 'Failed to submit ticket.');
     } finally {
       setSubmitting(false);
     }
@@ -62,6 +65,7 @@ export default function SupportTickets() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {(error || message) && <div className={`lg:col-span-3 p-4 rounded-xl ${error ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>{error || message}</div>}
           <div className="lg:col-span-2">
             <h2 className="text-xl font-black mb-6">Open a new inquiry</h2>
             <form onSubmit={handleSubmit} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl space-y-5">

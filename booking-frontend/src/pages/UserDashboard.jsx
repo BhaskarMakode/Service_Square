@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { formatCurrency } from '../utils/currency';
 
 export default function UserDashboard() {
   const [bookings, setBookings] = useState([]);
@@ -109,7 +110,7 @@ export default function UserDashboard() {
                               <div className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
                                 {booking.status}
                               </div>
-                              <p className="font-black text-lg text-indigo-600 dark:text-indigo-400">${booking.amount}</p>
+                              <p className="font-black text-lg text-indigo-600 dark:text-indigo-400">{formatCurrency(booking.amount)}</p>
                             </div>
                             <h4 className="text-xl font-bold text-slate-900 dark:text-white leading-tight capitalize">{booking.serviceType || 'Service'}</h4>
                             <p className="text-slate-500 text-sm mb-4">
@@ -153,7 +154,7 @@ export default function UserDashboard() {
                             Completed
                           </div>
                           <div className="text-right w-full sm:w-auto flex justify-between sm:block">
-                            <p className="font-bold text-slate-900 dark:text-white">${booking.amount}</p>
+                            <p className="font-bold text-slate-900 dark:text-white">{formatCurrency(booking.amount)}</p>
                             <Link to={`/review?bookingId=${booking._id}`} className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider hover:underline">Write Review</Link>
                           </div>
                         </div>

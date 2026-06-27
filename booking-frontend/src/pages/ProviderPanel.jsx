@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function ProviderPanel() {
   const { user } = useAuth();
@@ -9,6 +10,8 @@ export default function ProviderPanel() {
 
   const [provider, setProvider] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [earningsSummary, setEarningsSummary] = useState({ totalEarnings: 0, totalCommission: 0, totalRevenue: 0, transactions: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
@@ -25,20 +28,34 @@ export default function ProviderPanel() {
     try {
       setLoading(true);
       // Fetch provider profile and bookings concurrently
-      const [profileRes, bookingsRes] = await Promise.all([
+      const [profileRes, bookingsRes, earningsRes, paymentsRes] = await Promise.all([
         apiClient.get('/auth/profile'),
-        apiClient.get('/bookings/my-bookings')
+        apiClient.get('/bookings/my-bookings'),
+        apiClient.get('/payments/provider-earnings'),
+        apiClient.get('/payments/history', { params: { paymentStatus: 'succeeded', limit: 100 } })
       ]);
 
       if (profileRes.data.success) {
-        // If the backend /users/profile returns provider data alongside user data
-        // Or if we need to fetch provider specifically:
-        // Actually, we don't have a specific endpoint to just get "my provider profile".
-        // Let's rely on user context and fetch bookings, we can calculate earnings.
+        const { providerProfile } = profileRes.data.data;
+        if (!providerProfile) {
+          navigate('/onboarding-1');
+          return;
+        }
+        if (providerProfile.verificationStatus !== 'approved') {
+          navigate('/verification-status');
+          return;
+        }
+        setProvider(providerProfile);
       }
       
       if (bookingsRes.data.success) {
         setBookings(bookingsRes.data.data.bookings);
+      }
+      if (earningsRes.data.success) {
+        setEarningsSummary(earningsRes.data.data.summary || { totalEarnings: 0, totalCommission: 0, totalRevenue: 0, transactions: 0 });
+      }
+      if (paymentsRes.data.success) {
+        setPayments(paymentsRes.data.data.payments || []);
       }
     } catch (err) {
       setError(err.message || 'Failed to load dashboard data');
@@ -68,10 +85,25 @@ export default function ProviderPanel() {
 
   // Calculate metrics
   const completedBookings = bookings.filter(b => b.status === 'completed');
-  const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const totalEarnings = earningsSummary.totalEarnings || 0;
   const pendingRequests = bookings.filter(b => b.status === 'pending');
   const upcomingJobs = bookings.filter(b => b.status === 'accepted').sort((a, b) => new Date(a.scheduledStart) - new Date(b.scheduledStart));
   const newRequestsCount = pendingRequests.length;
+  const chartStart = new Date();
+  chartStart.setHours(0, 0, 0, 0);
+  chartStart.setDate(chartStart.getDate() - 6);
+  const earningsTrend = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(chartStart);
+    day.setDate(chartStart.getDate() + index);
+    const key = day.toISOString().slice(0, 10);
+    const amount = payments
+      .filter((payment) => (payment.verifiedAt || payment.updatedAt || payment.createdAt)?.slice(0, 10) === key)
+      .reduce((sum, payment) => sum + (payment.providerEarning || 0), 0);
+    return { key, amount };
+  });
+  const maxTrend = Math.max(...earningsTrend.map((item) => item.amount), 1);
+  const rating = Number(provider?.rating || 0);
+  const reviewsCount = provider?.reviewsCount || 0;
 
   return (
     <div className="antialiased text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 font-body min-h-screen">
@@ -170,12 +202,11 @@ export default function ProviderPanel() {
               <div className="md:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-sm flex flex-col justify-between border border-slate-100 dark:border-slate-700">
                 <div>
                   <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Total Earnings</p>
-                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">${totalEarnings.toFixed(2)}</h2>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(totalEarnings)}</h2>
                 </div>
                 <div className="mt-8 h-32 w-full flex items-end gap-2">
-                  {/* Simple Visual Chart Placeholder based on demo data */}
-                  {[30, 50, 40, 70, 60, 100, 80].map((height, i) => (
-                    <div key={i} className={`flex-1 rounded-t-lg transition-all ${i === 5 ? 'bg-indigo-600' : 'bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-800'}`} style={{ height: `${height}%` }}></div>
+                  {earningsTrend.map((item) => (
+                    <div key={item.key} title={`${item.key}: ${formatCurrency(item.amount)}`} className={`flex-1 rounded-t-lg transition-all ${item.key === new Date().toISOString().slice(0, 10) ? 'bg-indigo-600' : 'bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-800'}`} style={{ height: `${item.amount > 0 ? Math.max((item.amount / maxTrend) * 100, 6) : 2}%` }}></div>
                   ))}
                 </div>
               </div>
@@ -185,11 +216,11 @@ export default function ProviderPanel() {
                   <div>
                     <span className="material-symbols-outlined text-amber-400 text-3xl mb-4" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                     <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rating</p>
-                    <h2 className="text-3xl font-black text-slate-900 dark:text-white">4.9/5</h2>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white">{rating.toFixed(1)}/5</h2>
                   </div>
                   <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 self-start px-3 py-1.5 rounded-full mt-4 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                    +0.2 this month
+                    <span className="material-symbols-outlined text-[14px]">rate_review</span>
+                    {reviewsCount} review{reviewsCount !== 1 ? 's' : ''}
                   </div>
                 </div>
               </div>
@@ -221,7 +252,7 @@ export default function ProviderPanel() {
                       <div key={job._id} className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl group hover:shadow-md transition-all">
                         <div className="flex justify-between items-start mb-3">
                           <div className="font-bold text-slate-900 dark:text-white capitalize leading-tight pr-2">{job.serviceType}</div>
-                          <div className="text-indigo-600 dark:text-indigo-400 font-black text-lg">${job.amount}</div>
+                          <div className="text-indigo-600 dark:text-indigo-400 font-black text-lg">{formatCurrency(job.amount)}</div>
                         </div>
                         
                         <div className="flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400 mb-2">

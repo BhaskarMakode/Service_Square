@@ -5,6 +5,7 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [providerProfile, setProviderProfile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,7 +21,9 @@ export const AuthProvider = ({ children }) => {
       const response = await apiClient.get('/auth/profile');
       if (response.data && response.data.success) {
         setUser(response.data.data.user);
+        setProviderProfile(response.data.data.providerProfile || null);
         setIsAuthenticated(true);
+        return response.data.data;
       } else {
         throw new Error('Failed to load profile');
       }
@@ -41,6 +44,11 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const sendSuperAdminOtp = async ({ phone, email }) => {
+    const response = await apiClient.post('/auth/super-admin/send-otp', { phone, email });
+    return response.data;
+  };
+
   const verifyOtp = async (phone, otp) => {
     const response = await apiClient.post('/auth/verify-otp', { phone, otp });
     const { token, refreshToken, user: userData, requiresRegistration } = response.data.data;
@@ -56,6 +64,9 @@ export const AuthProvider = ({ children }) => {
     if (!requiresRegistration && userData) {
       setUser(userData);
       setIsAuthenticated(true);
+      if (userData.role === 'provider') {
+        await loadProfile();
+      }
     }
     
     return response.data;
@@ -73,6 +84,7 @@ export const AuthProvider = ({ children }) => {
     }
     
     setUser(newUserData);
+    setProviderProfile(null);
     setIsAuthenticated(true);
     
     return response.data;
@@ -90,13 +102,14 @@ export const AuthProvider = ({ children }) => {
     }
     
     setUser(null);
+    setProviderProfile(null);
     setIsAuthenticated(false);
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, sendOtp, verifyOtp, register, logout, loadProfile }}>
+    <AuthContext.Provider value={{ user, providerProfile, isAuthenticated, isLoading, sendOtp, sendSuperAdminOtp, verifyOtp, register, logout, loadProfile }}>
       {children}
     </AuthContext.Provider>
   );

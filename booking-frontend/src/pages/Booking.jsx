@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatCurrency } from '../utils/currency';
 import { Link } from 'react-router-dom';
 
 export default function Booking() {
@@ -141,20 +142,20 @@ export default function Booking() {
             <div className="space-y-4 mb-8">
               <div className="flex justify-between items-center text-on-surface-variant font-medium">
                 <span>Base Service Fee</span>
-                <span className="text-on-surface">$85.00</span>
+                <span className="text-on-surface">{formatCurrency(85)}</span>
               </div>
               <div className="flex justify-between items-center text-on-surface-variant font-medium">
                 <span>Equipment & Supplies</span>
-                <span className="text-on-surface">$15.00</span>
+                <span className="text-on-surface">{formatCurrency(15)}</span>
               </div>
               <div className="flex justify-between items-center text-on-surface-variant font-medium">
                 <span>Processing Tax (8%)</span>
-                <span className="text-on-surface">$8.00</span>
+                <span className="text-on-surface">{formatCurrency(8)}</span>
               </div>
               <div className="h-px bg-surface-container-high my-2"></div>
               <div className="flex justify-between items-center">
                 <span className="text-xl font-black">Total Due</span>
-                <span className="text-2xl font-black text-primary">$108.00</span>
+                <span className="text-2xl font-black text-primary">{formatCurrency(108)}</span>
               </div>
             </div>
             <Link to="/confirmation" className="w-full block text-center py-5 primary-gradient text-white text-lg font-black rounded-2xl shadow-xl shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all mb-4">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { formatCurrency, formatRate } from '../utils/currency';
 
 export default function ProviderDetails() {
   const [searchParams] = useSearchParams();
@@ -158,7 +159,7 @@ export default function ProviderDetails() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-indigo-600">${provider.hourlyRate || 50}</div>
+                    <div className="text-xl font-bold text-indigo-600">{formatCurrency(provider.hourlyRate || 50)}</div>
                     <div className="text-xs text-slate-500">per hour</div>
                   </div>
                 </div>
@@ -248,7 +249,7 @@ export default function ProviderDetails() {
         <div className="pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/40 dark:border-slate-700/50 p-3 rounded-full shadow-2xl flex items-center gap-6 px-8 max-w-lg mx-auto">
           <div className="hidden md:block">
             <div className="text-xs text-slate-500 font-bold uppercase tracking-widest">Hourly Rate</div>
-            <div className="text-sm font-bold text-slate-900 dark:text-white">${provider.hourlyRate || 50}/hr</div>
+            <div className="text-sm font-bold text-slate-900 dark:text-white">{formatRate(provider.hourlyRate || 50)}</div>
           </div>
           <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
           <Link to={`/booking?providerId=${provider._id}`} className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-bold py-4 px-12 rounded-full shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 active:scale-95 transition-all duration-300 text-center flex items-center justify-center">

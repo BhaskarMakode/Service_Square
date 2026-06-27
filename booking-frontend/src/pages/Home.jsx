@@ -1,7 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import apiClient from '../services/apiClient';
+import { formatCurrency } from '../utils/currency';
 
 function Home() {
+  const [trending, setTrending] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        setLoading(true);
+        const res = await apiClient.get('/search/trending?limit=3');
+        if (res.data.success) {
+          setTrending(res.data.data.providers || []);
+        }
+      } catch (err) {
+        console.error('Failed to load trending professionals:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrending();
+  }, []);
+
   return (
     <main>
       {/* Hero Section */}
@@ -155,81 +177,51 @@ function Home() {
             <p className="text-on-surface-variant text-lg">The highest-rated experts in your community.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Professional 1 */}
-            <div className="bg-surface-container-lowest rounded-3xl overflow-hidden editorial-shadow group border border-outline-variant/5">
-              <div className="relative h-64 overflow-hidden">
-                <img
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  alt="Professional painter with tools"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAsuvEhs8NNTsMhlL_8oq4WWEgAfqjr0KLOt_X_OuREEs92FLc2m219SQ1r-uHH5lLZm2Kmh9oJPIS8IhrWbaoJXbG3wa0mLlwLkhf9uSyiItt1OIVAbSjcXGvCxMRT8z0vu1NC_VuCi7z9HjTQYEpkHRWdRwml5K2oCRrIHQouvtc7QtI6VsnWpJ67Gg-MZPhTl7Z2gGgtQO0Vxcr6Vguhy3pnxis-Xi3ky3QLx-G2vL4D67FXOVMYR9u13WLnsQw27iUYQlDMPo"
-                />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                  <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-sm font-bold">4.9</span>
-                </div>
+            {loading ? (
+              <div className="col-span-3 text-center py-12 text-slate-500 font-bold animate-pulse">
+                Loading Top Rated Professionals...
               </div>
-              <div className="p-8">
-                <h3 className="text-xl font-bold text-on-surface mb-1">Marcus Thorne</h3>
-                <p className="text-primary font-semibold mb-4 text-sm uppercase tracking-wider">Expert Painter</p>
-                <p className="text-on-surface-variant mb-6 line-clamp-2">Specializing in high-end residential painting and custom wall finishes for over 12 years.</p>
-                <div className="flex items-center justify-between border-t border-outline-variant/10 pt-6">
-                  <span className="text-on-surface font-bold">$45/hr</span>
-                  <Link to="/service-listing" className="text-primary font-bold flex items-center gap-2">
-                    Book Now <span className="material-symbols-outlined text-sm">chevron_right</span>
-                  </Link>
-                </div>
+            ) : trending.length === 0 ? (
+              <div className="col-span-3 text-center py-12 text-slate-500 font-semibold border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                No verified professionals found in your area yet.
               </div>
-            </div>
-            {/* Professional 2 */}
-            <div className="bg-surface-container-lowest rounded-3xl overflow-hidden editorial-shadow group border border-outline-variant/5">
-              <div className="relative h-64 overflow-hidden">
-                <img
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  alt="Handyman fixing a kitchen faucet"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnb2363mud8JpCyPFSl_ejbzs6iq8ZjO6XELAPXuhjWfG-vE_oAA0K40v0ljd988GtMAR0Llxq8NOsu6kPLZTXK9I7f38iACUJupOMMjbEWlS_T7llilXwoCh0igNb1mmsiYkZQjUv_aodMj0qLzh_AdKh0Csi2Y2boXUuC8TncZ4Nakmrn7z41Lr3ujWd50sqKbNm_6qr5aEvgOe0ZOpo5EcsonnhQnJRUszIxQXaBA60S0skpXw9mx_k-SfD09ts9BEdz-6e5ck"
-                />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                  <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-sm font-bold">5.0</span>
-                </div>
-              </div>
-              <div className="p-8">
-                <h3 className="text-xl font-bold text-on-surface mb-1">Sarah Jenkins</h3>
-                <p className="text-primary font-semibold mb-4 text-sm uppercase tracking-wider">Master Plumber</p>
-                <p className="text-on-surface-variant mb-6 line-clamp-2">Emergency repairs and installations. Highly recommended for efficient and clean workspace.</p>
-                <div className="flex items-center justify-between border-t border-outline-variant/10 pt-6">
-                  <span className="text-on-surface font-bold">$60/hr</span>
-                  <Link to="/service-listing" className="text-primary font-bold flex items-center gap-2">
-                    Book Now <span className="material-symbols-outlined text-sm">chevron_right</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-            {/* Professional 3 */}
-            <div className="bg-surface-container-lowest rounded-3xl overflow-hidden editorial-shadow group border border-outline-variant/5">
-              <div className="relative h-64 overflow-hidden">
-                <img
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  alt="Professional mechanic working on a car engine"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlqKyQE7feui95BVP5NUjYynRtj2RvRFnTgIgw_u1gQNcrw7AOy02HZbDv_ixrM8y16LBUxTzy5Etna_DBsmae2t6-1Jip8NWQJ4jwB6HX_k4RatsQMH2x8z_QnETSE9hTabv-r5OO71dtEa-9WP_mTpgItyw49tzh-yLaU5-GAjPWzXHg4Ba9MZvDTUk4AjzfI9qdKsK43Djx3rSGCiWM-AU9hXj-uj6vghCsr-wqzKy5aTZFcdBL4UXK19wTxz_g-IeOO92bA3c"
-                />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                  <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-sm font-bold">4.8</span>
-                </div>
-              </div>
-              <div className="p-8">
-                <h3 className="text-xl font-bold text-on-surface mb-1">David Chen</h3>
-                <p className="text-primary font-semibold mb-4 text-sm uppercase tracking-wider">Auto Specialist</p>
-                <p className="text-on-surface-variant mb-6 line-clamp-2">Expert mobile mechanic. Diagnostics, brake repair, and routine maintenance at your home.</p>
-                <div className="flex items-center justify-between border-t border-outline-variant/10 pt-6">
-                  <span className="text-on-surface font-bold">$55/hr</span>
-                  <Link to="/booking" className="text-primary font-bold flex items-center gap-2">
-                    Book Now <span className="material-symbols-outlined text-sm">chevron_right</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
+            ) : (
+              trending.map((p) => {
+                const u = p.user || {};
+                return (
+                  <div key={p._id} className="bg-surface-container-lowest rounded-3xl overflow-hidden editorial-shadow group border border-outline-variant/5 flex flex-col justify-between">
+                    <div>
+                      <div className="relative h-64 overflow-hidden bg-indigo-50">
+                        <img
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          alt={u.name || 'Professional'}
+                          src={u.avatar || `https://ui-avatars.com/api/?name=${u.name || 'Provider'}&background=4F46E5&color=fff`}
+                        />
+                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                          <span className="material-symbols-outlined text-yellow-500 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                          <span className="text-sm font-bold">{p.rating ? p.rating.toFixed(1) : '5.0'}</span>
+                        </div>
+                      </div>
+                      <div className="p-8">
+                        <h3 className="text-xl font-bold text-on-surface mb-1 capitalize">{u.name || 'Service Partner'}</h3>
+                        <p className="text-primary font-semibold mb-4 text-sm uppercase tracking-wider capitalize">{p.category} Specialist</p>
+                        <p className="text-on-surface-variant mb-6 line-clamp-2 text-sm leading-relaxed">
+                          Expert {p.category} services with {p.experience}+ years of professional experience. High-quality work guaranteed.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-8 pt-0">
+                      <div className="flex items-center justify-between border-t border-outline-variant/10 pt-6">
+                        <span className="text-on-surface font-bold">{formatCurrency(p.hourlyRate)}/hr</span>
+                        <Link to={`/booking?providerId=${p._id}`} className="text-primary font-bold flex items-center gap-2">
+                          Book Now <span className="material-symbols-outlined text-sm">chevron_right</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </section>

@@ -22,7 +22,7 @@ export default function AdminReports() {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/reports/all');
+      const res = await apiClient.get('/report/all');
       if (res.data.success) {
         setReports(res.data.data.reports || []);
       }
@@ -41,7 +41,7 @@ export default function AdminReports() {
 
     try {
       setLoading(true);
-      const res = await apiClient.put(`/reports/${id}/action`, {
+      const res = await apiClient.put(`/report/${id}/action`, {
         status: "resolved",
         adminAction: action,
         actionNote: note
@@ -131,7 +131,7 @@ export default function AdminReports() {
                   </div>
                   
                   <div className="flex gap-3 w-full md:w-auto">
-                    <button className="flex-1 md:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/10 transition-all flex items-center justify-center gap-2">
+                    <button onClick={() => handleReview(report._id)} className="flex-1 md:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/10 transition-all flex items-center justify-center gap-2">
                       Review
                     </button>
                     <button className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 flex items-center justify-center transition-all">

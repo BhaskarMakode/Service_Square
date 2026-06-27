@@ -119,7 +119,7 @@ export default function AddNewService() {
 <div className="space-y-2">
 <label className="text-sm font-bold tracking-wide uppercase text-on-surface-variant" htmlFor="price">Starting Price</label>
 <div className="relative">
-<span className="absolute left-5 top-4 font-bold text-primary">$</span>
+<span className="absolute left-5 top-4 font-bold text-primary">₹</span>
 <input className="w-full h-14 pl-10 pr-5 bg-surface-container-high border-none rounded-xl focus:ring-2 focus:ring-primary-fixed focus:bg-surface-container-lowest transition-all duration-200 outline-none text-on-surface placeholder:text-outline" id="price" placeholder="0.00" type="number"/>
 </div>
 </div>

@@ -64,7 +64,7 @@ export default function ReviewPage() {
   if (loading) return <div className="min-h-screen pt-24 text-center">Loading...</div>;
   if (!bookingId || !booking) return <div className="min-h-screen pt-24 text-center text-rose-500">Booking not found or no ID provided.</div>;
 
-  const providerName = booking.providerId?.fullName || 'Your Provider';
+  const providerName = booking.providerId?.userId?.name || booking.providerId?.fullName || booking.providerId?.name || 'Your Provider';
   const serviceType = booking.serviceType || 'Service';
 
   return (
