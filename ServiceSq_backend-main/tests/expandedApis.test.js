@@ -12,6 +12,7 @@ const request = require("supertest");
 
 const app = require("../app");
 const Address = require("../models/Address");
+const Availability = require("../models/Availability");
 const Booking = require("../models/Booking");
 const LiveLocation = require("../models/LiveLocation");
 const ProviderProfile = require("../models/ProviderProfile");
@@ -270,5 +271,32 @@ describe("Expanded APIs", () => {
       .expect(200);
 
     expect(response.body.data.searches.map((item) => item.keyword)).toEqual(["cleaning", "plumber"]);
+  });
+
+  it("allows fetching slots for duration under 30 minutes", async () => {
+    const providerUser = await createUser({ role: "provider" });
+    const provider = await createProviderProfile(providerUser, { verificationStatus: "approved", availabilityStatus: "available" });
+    
+    await Availability.create({
+      providerId: provider._id,
+      isOnline: true,
+      isAvailable: true,
+      workingHours: [
+        { day: "monday", startTime: "09:00", endTime: "18:00" },
+        { day: "tuesday", startTime: "09:00", endTime: "18:00" },
+        { day: "wednesday", startTime: "09:00", endTime: "18:00" },
+        { day: "thursday", startTime: "09:00", endTime: "18:00" },
+        { day: "friday", startTime: "09:00", endTime: "18:00" },
+        { day: "saturday", startTime: "09:00", endTime: "18:00" },
+        { day: "sunday", startTime: "09:00", endTime: "18:00" }
+      ]
+    });
+
+    const response = await request(app)
+      .get(`/api/availability/provider/${provider._id}/slots?date=2026-07-01&durationMinutes=22`)
+      .expect(200);
+
+    expect(response.body.data.slots.length).toBeGreaterThan(0);
+    expect(response.body.data.durationMinutes).toBe(22);
   });
 });

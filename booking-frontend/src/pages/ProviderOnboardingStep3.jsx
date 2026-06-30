@@ -29,11 +29,23 @@ export default function ProviderOnboardingStep3() {
 
   const [selectedDay, setSelectedDay] = useState('monday');
   const [submitting, setSubmitting] = useState(false);
-  const [coords, setCoords] = useState({ latitude: 23.2966, longitude: 77.4098 });
+  const [coords, setCoords] = useState(() => {
+    const lat = localStorage.getItem('onboarding_latitude');
+    const lng = localStorage.getItem('onboarding_longitude');
+    return {
+      latitude: lat ? parseFloat(lat) : 23.2966,
+      longitude: lng ? parseFloat(lng) : 77.4098
+    };
+  });
   const [documentType, setDocumentType] = useState('government_id');
   const [documentFile, setDocumentFile] = useState(null);
 
   useEffect(() => {
+    const lat = localStorage.getItem('onboarding_latitude');
+    const lng = localStorage.getItem('onboarding_longitude');
+    if (lat && lng) {
+      return;
+    }
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -154,6 +166,8 @@ export default function ProviderOnboardingStep3() {
       localStorage.removeItem('onboarding_description');
       localStorage.removeItem('onboarding_hourlyRate');
       localStorage.removeItem('onboarding_address');
+      localStorage.removeItem('onboarding_latitude');
+      localStorage.removeItem('onboarding_longitude');
 
       // 6. Reload user profile context
       await loadProfile();

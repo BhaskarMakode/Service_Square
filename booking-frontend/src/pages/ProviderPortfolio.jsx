@@ -2,6 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix default leaflet marker icon issue in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function MapRecenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  return null;
+}
+
+function LocationMarker({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+
+  return position[0] && position[1] ? (
+    <Marker position={position} />
+  ) : null;
+}
 
 export default function ProviderPortfolio() {
   const { user } = useAuth();
@@ -27,6 +60,14 @@ export default function ProviderPortfolio() {
 
   // View Detail State
   const [selectedProject, setSelectedProject] = useState(null);
+
+  // Location Modal States
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locLatitude, setLocLatitude] = useState(23.259933);
+  const [locLongitude, setLocLongitude] = useState(77.412613);
+  const [locMapCenter, setLocMapCenter] = useState([23.259933, 77.412613]);
+  const [locAddress, setLocAddress] = useState('');
+  const [updatingLocation, setUpdatingLocation] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'provider') {
@@ -90,6 +131,47 @@ export default function ProviderPortfolio() {
       alert(err.response?.data?.message || err.message || "Failed to save bio.");
     } finally {
       setUpdatingBio(false);
+    }
+  };
+
+  const handleOpenLocationModal = () => {
+    const lat = provider?.location?.coordinates?.[1] || 23.259933;
+    const lng = provider?.location?.coordinates?.[0] || 77.412613;
+    setLocLatitude(lat);
+    setLocLongitude(lng);
+    setLocMapCenter([lat, lng]);
+    setLocAddress(provider?.address || '');
+    setShowLocationModal(true);
+  };
+
+  const handleSaveLocation = async (e) => {
+    e.preventDefault();
+    if (!locAddress.trim()) {
+      alert("Address is required.");
+      return;
+    }
+    try {
+      setUpdatingLocation(true);
+      const res = await apiClient.put('/providers/update-profile', { 
+        address: locAddress,
+        latitude: locLatitude,
+        longitude: locLongitude
+      });
+      if (res.data.success) {
+        setProvider(prev => ({ 
+          ...prev, 
+          address: locAddress,
+          location: {
+            ...prev.location,
+            coordinates: [locLongitude, locLatitude]
+          }
+        }));
+        setShowLocationModal(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Failed to save location.");
+    } finally {
+      setUpdatingLocation(false);
     }
   };
 
@@ -213,6 +295,13 @@ export default function ProviderPortfolio() {
                   Edit Bio
                 </button>
                 <button 
+                  onClick={handleOpenLocationModal}
+                  className="flex-1 md:flex-none px-6 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">my_location</span>
+                  Update Location
+                </button>
+                <button 
                   onClick={() => setShowAddWorkModal(true)}
                   className="flex-1 md:flex-none px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
                 >
@@ -299,6 +388,82 @@ export default function ProviderPortfolio() {
           </div>
         </div>
       </main>
+
+      {/* Edit Location Modal */}
+      {showLocationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-8 shadow-2xl border border-slate-100 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Update Base Location</h3>
+              <button 
+                type="button" 
+                onClick={() => setShowLocationModal(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors text-slate-500 dark:text-slate-300"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleSaveLocation} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Service Base Address</label>
+                <input
+                  type="text"
+                  value={locAddress}
+                  onChange={(e) => setLocAddress(e.target.value)}
+                  placeholder="Enter your new service base address..."
+                  className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-all"
+                  required
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <label className="text-sm font-semibold text-slate-500 dark:text-slate-400 block">Pin Your Location on Map</label>
+                <div className="w-full h-64 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative z-10">
+                  <MapContainer
+                    center={locMapCenter}
+                    zoom={14}
+                    className="w-full h-full"
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <LocationMarker
+                      position={[locLatitude, locLongitude]}
+                      setPosition={(pos) => {
+                        setLocLatitude(pos[0]);
+                        setLocLongitude(pos[1]);
+                      }}
+                    />
+                    <MapRecenter center={[locLatitude, locLongitude]} />
+                  </MapContainer>
+                </div>
+                <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[14px] text-indigo-600">info</span>
+                  Selected Coordinates: {locLatitude.toFixed(6)}, {locLongitude.toFixed(6)}
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowLocationModal(false)}
+                  className="flex-1 py-3 px-5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingLocation}
+                  className="flex-1 py-3 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-75"
+                >
+                  {updatingLocation ? 'Saving...' : 'Save Location'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit Bio Modal */}
       {showBioModal && (

@@ -41,8 +41,8 @@ const providerSlotsValidator = [
     .withMessage("date must be an ISO date in YYYY-MM-DD format."),
   query("durationMinutes")
     .optional()
-    .isInt({ min: 30, max: 480 })
-    .withMessage("durationMinutes must be between 30 and 480.")
+    .isInt({ min: 1, max: 480 })
+    .withMessage("durationMinutes must be between 1 and 480.")
 ];
 
 const onlineProvidersValidator = [
@@ -73,10 +73,20 @@ const onlineProvidersValidator = [
     .withMessage("limit must be between 1 and 100.")
 ];
 
+const blockedDatesValidator = [
+  body("blockedDates")
+    .isArray()
+    .withMessage("blockedDates must be an array."),
+  body("blockedDates.*")
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage("Each blocked date must be in YYYY-MM-DD format.")
+];
+
 module.exports = {
   onlineProvidersValidator,
   providerAvailabilityValidator,
   providerSlotsValidator,
   toggleAvailabilityValidator,
-  workingHourValidator
+  workingHourValidator,
+  blockedDatesValidator
 };

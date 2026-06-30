@@ -44,6 +44,10 @@ const availabilitySchema = new mongoose.Schema(
       type: [workingHourSchema],
       default: []
     },
+    blockedDates: {
+      type: [String],
+      default: []
+    },
     lastActive: {
       type: Date,
       default: Date.now,

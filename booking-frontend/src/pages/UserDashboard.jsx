@@ -179,6 +179,23 @@ export default function UserDashboard() {
                             <p className="text-slate-500 text-sm mb-4">
                               Address: <span className="text-slate-700 dark:text-slate-300 font-semibold">{booking.address}</span>
                             </p>
+                            {booking.status === 'accepted' && booking.providerId && (
+                              <div className="mb-4 p-3.5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl flex items-center gap-3.5 border border-slate-100 dark:border-slate-700 shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-750">
+                                <img
+                                  src={booking.providerId.userId?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.providerId.userId?.name || 'Professional')}&background=4F46E5&color=fff`}
+                                  alt="Provider Avatar"
+                                  className="w-10 h-10 rounded-xl object-cover shadow-sm border border-white dark:border-slate-600"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[9px] text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-wider">Assigned Professional</p>
+                                  <h5 className="text-sm font-extrabold text-slate-900 dark:text-white capitalize truncate">{booking.providerId.userId?.name || 'Professional'}</h5>
+                                </div>
+                                <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-[9px] font-black rounded-md flex items-center gap-1 uppercase tracking-wider shrink-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Accepted
+                                </span>
+                              </div>
+                            )}
                             <div className="mt-auto flex items-center gap-4 text-xs text-slate-500 mb-6">
                               <div className="flex items-center gap-1.5">
                                 <span className="material-symbols-outlined text-sm">event</span>
@@ -198,7 +215,7 @@ export default function UserDashboard() {
                               <span className="material-symbols-outlined text-sm">chat_bubble</span>
                               Message
                             </Link>
-                            {booking.status === 'pending' && (
+                            {['pending', 'accepted'].includes(booking.status) && (
                               <button 
                                 onClick={() => handleCancelBooking(booking._id)}
                                 disabled={cancellingId === booking._id}

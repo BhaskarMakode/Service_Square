@@ -112,6 +112,17 @@ const getProviderSlots = asyncHandler(async (req, res) => {
   if (provider.availabilityStatus !== "available" || !availability || !availability.isOnline || !availability.isAvailable) {
     throw new AppError("Provider is currently offline or unavailable for new bookings.", 409);
   }
+
+  if (availability.blockedDates && availability.blockedDates.includes(req.query.date)) {
+    const durationMinutes = Number(req.query.durationMinutes || 120);
+    return sendSuccess(res, 200, "Date is blocked. No slots available.", {
+      providerId: provider._id,
+      date: req.query.date,
+      durationMinutes,
+      slots: []
+    });
+  }
+
   const date = new Date(`${req.query.date}T00:00:00`);
   const durationMinutes = Number(req.query.durationMinutes || 120);
   const day = WEEKDAYS[date.getDay()];
@@ -263,10 +274,32 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
   });
 });
 
+const updateBlockedDates = asyncHandler(async (req, res) => {
+  const provider = await getCurrentProvider(req.user._id);
+  let availability = await Availability.findOne({ providerId: provider._id });
+
+  if (!availability) {
+    availability = await Availability.create({ providerId: provider._id });
+  }
+
+  availability.blockedDates = req.body.blockedDates || [];
+  availability.lastActive = new Date();
+  await availability.save();
+
+  await publishEvent("availability.working_hours_updated", {
+    providerId: provider._id.toString()
+  });
+
+  return sendSuccess(res, 200, "Blocked dates updated successfully.", {
+    availability
+  });
+});
+
 module.exports = {
   getOnlineProviders,
   getProviderAvailability,
   getProviderSlots,
   toggleAvailability,
-  updateWorkingHours
+  updateWorkingHours,
+  updateBlockedDates
 };

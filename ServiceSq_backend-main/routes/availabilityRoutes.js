@@ -4,7 +4,8 @@ const {
   getProviderAvailability,
   getProviderSlots,
   toggleAvailability,
-  updateWorkingHours
+  updateWorkingHours,
+  updateBlockedDates
 } = require("../controllers/availabilityController");
 const protect = require("../middleware/auth");
 const requireApprovedProvider = require("../middleware/approvedProvider");
@@ -15,7 +16,8 @@ const {
   providerAvailabilityValidator,
   providerSlotsValidator,
   toggleAvailabilityValidator,
-  workingHourValidator
+  workingHourValidator,
+  blockedDatesValidator
 } = require("../validators/availabilityValidators");
 
 const router = express.Router();
@@ -38,6 +40,14 @@ router.put(
   workingHourValidator,
   validate,
   updateWorkingHours
+);
+router.put(
+  "/blocked-dates",
+  protect,
+  authorizeRoles("provider"),
+  blockedDatesValidator,
+  validate,
+  updateBlockedDates
 );
 router.get("/online-providers", onlineProvidersValidator, validate, getOnlineProviders);
 

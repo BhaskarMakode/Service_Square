@@ -14,6 +14,7 @@ export default function ProviderPanel() {
   const [earningsSummary, setEarningsSummary] = useState({ totalEarnings: 0, totalCommission: 0, totalRevenue: 0, transactions: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(null);
 
   useEffect(() => {
@@ -28,12 +29,17 @@ export default function ProviderPanel() {
     try {
       setLoading(true);
       // Fetch provider profile and bookings concurrently
-      const [profileRes, bookingsRes, earningsRes, paymentsRes] = await Promise.all([
+      const [profileRes, bookingsRes, earningsRes, paymentsRes, notifRes] = await Promise.all([
         apiClient.get('/auth/profile'),
         apiClient.get('/bookings/my-bookings'),
         apiClient.get('/payments/provider-earnings'),
-        apiClient.get('/payments/history', { params: { paymentStatus: 'succeeded', limit: 100 } })
+        apiClient.get('/payments/history', { params: { paymentStatus: 'succeeded', limit: 100 } }),
+        apiClient.get('/notifications', { params: { isRead: false, limit: 1 } }).catch(() => ({ data: { success: false } }))
       ]);
+
+      if (notifRes?.data?.success) {
+        setUnreadCount(notifRes.data.data?.pagination?.total || 0);
+      }
 
       if (profileRes.data.success) {
         const { providerProfile } = profileRes.data.data;
@@ -136,7 +142,21 @@ export default function ProviderPanel() {
             <Link className="text-slate-600 dark:text-slate-400 font-medium hover:text-indigo-500 transition-colors" to="/provider-earnings">Earnings</Link>
           </nav>
           <div className="flex items-center gap-4">
-            <button className="material-symbols-outlined p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-transform active:scale-95">notifications</button>
+            <Link 
+              to="/notifications" 
+              className="w-10 h-10 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors relative pointer-events-auto"
+              title={unreadCount > 0 ? `${unreadCount} unread` : 'Notifications'}
+              onClick={() => setUnreadCount(0)}
+            >
+              <span className="material-symbols-outlined" style={unreadCount > 0 ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                {unreadCount > 0 ? 'notifications_active' : 'notifications'}
+              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </Link>
             <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold uppercase overflow-hidden">
                 {user?.avatar ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover"/> : user?.name?.charAt(0) || 'P'}
             </div>
@@ -374,11 +394,11 @@ export default function ProviderPanel() {
                           </div>
                           
                           <Link 
-                            to={`/chat?bookingId=${job._id}`}
+                            to={`/live-tracking?bookingId=${job._id}`}
                             className="bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-all flex items-center gap-1.5"
                           >
-                            <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
-                            Chat
+                            <span className="material-symbols-outlined text-[16px]">map</span>
+                            Track & Chat
                           </Link>
                           <button 
                             onClick={() => handleUpdateBookingStatus(job._id, 'completed')}

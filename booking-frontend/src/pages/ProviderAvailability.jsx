@@ -24,6 +24,11 @@ export default function ProviderAvailability() {
   const [isAvailable, setIsAvailable] = useState(true);
   const [schedule, setSchedule] = useState(defaultSchedule);
 
+  // Blocked Dates States
+  const [blockedDates, setBlockedDates] = useState([]);
+  const [newBlockedDate, setNewBlockedDate] = useState('');
+  const [showAddDateInput, setShowAddDateInput] = useState(false);
+
   useEffect(() => {
     if (!user || user.role !== 'provider') {
       navigate('/');
@@ -44,6 +49,10 @@ export default function ProviderAvailability() {
           const availability = availRes.data.data.availability;
           setIsOnline(availability.isOnline);
           setIsAvailable(availability.isAvailable);
+          
+          if (availability.blockedDates) {
+            setBlockedDates(availability.blockedDates);
+          }
           
           if (availability.workingHours && availability.workingHours.length > 0) {
             // merge fetched working hours with default schedule (for active vs inactive)
@@ -108,6 +117,21 @@ export default function ProviderAvailability() {
     }
   };
 
+  const handleAddBlockedDate = () => {
+    if (!newBlockedDate) return;
+    if (blockedDates.includes(newBlockedDate)) {
+      alert("This date is already blocked.");
+      return;
+    }
+    setBlockedDates(prev => [...prev, newBlockedDate].sort());
+    setNewBlockedDate('');
+    setShowAddDateInput(false);
+  };
+
+  const handleRemoveBlockedDate = (dateToRemove) => {
+    setBlockedDates(prev => prev.filter(d => d !== dateToRemove));
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -117,12 +141,24 @@ export default function ProviderAvailability() {
         endTime: d.endTime
       }));
       
-      await apiClient.put('/availability/working-hours', { workingHours: activeWorkingHours });
+      await Promise.all([
+        apiClient.put('/availability/working-hours', { workingHours: activeWorkingHours }),
+        apiClient.put('/availability/blocked-dates', { blockedDates })
+      ]);
       navigate('/provider-panel');
     } catch (err) {
       alert(err.message || 'Failed to save working hours');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const formatDateDisplay = (dateStr) => {
+    try {
+      const d = new Date(`${dateStr}T00:00:00`);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (e) {
+      return dateStr;
     }
   };
 
@@ -237,17 +273,49 @@ export default function ProviderAvailability() {
               <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Upcoming dates where you have marked yourself unavailable for the entire day.</p>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {/* Static blocked dates for design showcase */}
-                {['May 18', 'May 24'].map((date) => (
-                  <div className="p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 rounded-xl border border-rose-100 dark:border-rose-900/50 flex flex-col items-center justify-center text-center" key={date}>
+                {blockedDates.map((dateStr) => (
+                  <div className="relative p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 rounded-xl border border-rose-100 dark:border-rose-900/50 flex flex-col items-center justify-center text-center group" key={dateStr}>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveBlockedDate(dateStr)}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center bg-rose-100 hover:bg-rose-200 dark:bg-rose-800 dark:hover:bg-rose-700 text-rose-600 dark:text-rose-300 md:opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">close</span>
+                    </button>
                     <span className="material-symbols-outlined mb-2 opacity-80">block</span>
-                    <p className="font-black">{date}</p>
+                    <p className="font-black text-sm">{formatDateDisplay(dateStr)}</p>
+                    <p className="text-[10px] opacity-75">{dateStr.split('-')[0]}</p>
                   </div>
                 ))}
-                <button className="p-4 bg-slate-50 dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex flex-col items-center justify-center gap-2 group">
-                  <span className="material-symbols-outlined group-hover:scale-110 transition-transform">add_circle</span>
-                  <span className="font-bold text-sm">Add Date</span>
-                </button>
+                {showAddDateInput ? (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center gap-2">
+                    <input
+                      type="date"
+                      value={newBlockedDate}
+                      onChange={(e) => setNewBlockedDate(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 rounded text-slate-850 dark:text-white focus:outline-none"
+                    />
+                    <div className="flex gap-2 w-full">
+                      <button
+                        onClick={handleAddBlockedDate}
+                        className="flex-1 py-1 px-2 bg-indigo-600 text-white rounded text-[11px] font-bold hover:bg-indigo-700"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => { setShowAddDateInput(false); setNewBlockedDate(''); }}
+                        className="flex-1 py-1 px-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-350 rounded text-[11px] font-bold hover:bg-slate-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowAddDateInput(true)} className="p-4 bg-slate-50 dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex flex-col items-center justify-center gap-2 group">
+                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform">add_circle</span>
+                    <span className="font-bold text-sm">Add Date</span>
+                  </button>
+                )}
               </div>
             </section>
           </div>

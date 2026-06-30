@@ -76,16 +76,24 @@ const updateLocation = asyncHandler(async (req, res) => {
 });
 
 const getProviderLocation = asyncHandler(async (req, res) => {
-  const provider = await ProviderProfile.findById(req.params.id).select("userId category availabilityStatus");
+  const provider = await ProviderProfile.findById(req.params.id).select("userId category availabilityStatus location address");
 
   if (!provider) {
     throw new AppError("Provider profile not found.", 404);
   }
 
-  const liveLocation = await LiveLocation.findOne({ providerId: provider._id });
+  let liveLocation = await LiveLocation.findOne({ providerId: provider._id });
 
   if (!liveLocation) {
-    throw new AppError("Live location not found for this provider.", 404);
+    if (provider.location && provider.location.coordinates) {
+      liveLocation = {
+        providerId: provider._id,
+        location: provider.location,
+        updatedAt: provider.updatedAt || new Date()
+      };
+    } else {
+      throw new AppError("Live location not found for this provider.", 404);
+    }
   }
 
   const latitude = toNumber(req.query.latitude);

@@ -1,6 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { categoriesApi } from '../services/serviceApi';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix default leaflet marker icon issue in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function MapRecenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  return null;
+}
+
+function LocationMarker({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+
+  return position[0] && position[1] ? (
+    <Marker position={position} />
+  ) : null;
+}
 
 const PREDEFINED_CATEGORIES = [
   'Electrician', 'Plumber', 'Carpenter', 'Painter', 'AC Repair', 'Appliance Repair', 
@@ -18,6 +51,9 @@ export default function ProviderOnboardingStep2() {
   const [hourlyRate, setHourlyRate] = useState('');
   const [address, setAddress] = useState('');
   const [loadingCats, setLoadingCats] = useState(true);
+  const [latitude, setLatitude] = useState(23.259933);
+  const [longitude, setLongitude] = useState(77.412613);
+  const [mapCenter, setMapCenter] = useState([23.259933, 77.412613]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -39,6 +75,25 @@ export default function ProviderOnboardingStep2() {
     setDescription(localStorage.getItem('onboarding_description') || '');
     setHourlyRate(localStorage.getItem('onboarding_hourlyRate') || '');
     setAddress(localStorage.getItem('onboarding_address') || '');
+
+    const savedLat = localStorage.getItem('onboarding_latitude');
+    const savedLng = localStorage.getItem('onboarding_longitude');
+    if (savedLat && savedLng) {
+      const parsedLat = parseFloat(savedLat);
+      const parsedLng = parseFloat(savedLng);
+      setLatitude(parsedLat);
+      setLongitude(parsedLng);
+      setMapCenter([parsedLat, parsedLng]);
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLatitude(pos.coords.latitude);
+          setLongitude(pos.coords.longitude);
+          setMapCenter([pos.coords.latitude, pos.coords.longitude]);
+        },
+        (err) => console.log('Geolocation failed', err)
+      );
+    }
   }, []);
 
   const handleSubmit = (e) => {
@@ -69,6 +124,8 @@ export default function ProviderOnboardingStep2() {
     localStorage.setItem('onboarding_description', description);
     localStorage.setItem('onboarding_hourlyRate', hourlyRate);
     localStorage.setItem('onboarding_address', address);
+    localStorage.setItem('onboarding_latitude', latitude);
+    localStorage.setItem('onboarding_longitude', longitude);
 
     navigate('/onboarding-3');
   };
@@ -187,6 +244,35 @@ export default function ProviderOnboardingStep2() {
                   onChange={(e) => setAddress(e.target.value)}
                   required
                 />
+              </div>
+
+              {/* Pin Location on Map */}
+              <div className="space-y-3 pt-2">
+                <label className="text-sm font-semibold text-slate-500 dark:text-slate-400 block ml-1">Pin Your Service Location on Map (Required for Live Tracking)</label>
+                <div className="w-full h-64 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative z-10">
+                  <MapContainer
+                    center={mapCenter}
+                    zoom={14}
+                    className="w-full h-full"
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <LocationMarker
+                      position={[latitude, longitude]}
+                      setPosition={(pos) => {
+                        setLatitude(pos[0]);
+                        setLongitude(pos[1]);
+                      }}
+                    />
+                    <MapRecenter center={[latitude, longitude]} />
+                  </MapContainer>
+                </div>
+                <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1.5 ml-1">
+                  <span className="material-symbols-outlined text-[14px] text-indigo-600">info</span>
+                  Selected Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)} (Click anywhere on the map to place the pin)
+                </div>
               </div>
 
               {/* Service Description */}

@@ -270,7 +270,14 @@ export default function BookingPage() {
 
       navigate(`/confirmation?bookingId=${booking._id}`, { state: { bookingId: booking._id } });
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to create booking.');
+      const apiErrorMsg = err.response?.data?.message;
+      const validationDetails = err.response?.data?.errors;
+      if (validationDetails && Array.isArray(validationDetails) && validationDetails.length > 0) {
+        const detailStr = validationDetails.map(e => `${e.field}: ${e.message}`).join(', ');
+        setError(`Validation failed: ${detailStr}`);
+      } else {
+        setError(apiErrorMsg || err.message || 'Failed to create booking.');
+      }
     } finally {
       setSubmitting(false);
     }

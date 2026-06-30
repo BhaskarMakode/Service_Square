@@ -99,18 +99,18 @@ function App() {
                     <Route element={<ProtectedRoute allowedRoles={['Customer', 'Admin']} />}>
                       <Route path="/dashboard" element={<UserDashboard />} />
                       <Route path="/review" element={<ReviewPage />} />
-                      <Route path="/tracking" element={<LiveTracking />} />
                       <Route path="/booking-confirmation" element={<BookingConfirmation />} />
                       <Route path="/confirmation" element={<BookingConfirmation />} />
                       <Route path="/address-book" element={<AddressBook />} />
                       <Route path="/invoices" element={<InvoiceViewer />} />
-                      <Route path="/notifications" element={<NotificationsCenter />} />
                       <Route path="/support" element={<SupportTickets />} />
                     </Route>
 
                     {/* Shared Protected Routes */}
                     <Route element={<ProtectedRoute allowedRoles={['Customer', 'Provider', 'Admin']} />}>
                       <Route path="/chat" element={<ChatPage />} />
+                      <Route path="/tracking" element={<LiveTracking />} />
+                      <Route path="/notifications" element={<NotificationsCenter />} />
                     </Route>
 
                     {/* Provider Protected Routes (Approved Only) */}
