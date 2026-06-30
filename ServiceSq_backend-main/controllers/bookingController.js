@@ -44,15 +44,15 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new AppError("Provider is not verified yet.", 409);
   }
 
-  // if (provider.availabilityStatus !== "available") {
-  //   throw new AppError("Provider is not available right now.", 409);
-  // }
+  if (provider.availabilityStatus !== "available") {
+    throw new AppError("Provider is not available right now.", 409);
+  }
 
   const availability = await Availability.findOne({ providerId: provider._id });
 
-  // if (!availability || !availability.isOnline || !availability.isAvailable) {
-  //   throw new AppError("Provider is not online or available right now.", 409);
-  // }
+  if (!availability || !availability.isOnline || !availability.isAvailable) {
+    throw new AppError("Provider is not online or available right now.", 409);
+  }
 
   const { start, end } = assertValidSchedule(req.body.scheduledStart, req.body.scheduledEnd);
 

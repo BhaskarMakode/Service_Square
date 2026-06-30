@@ -1,6 +1,7 @@
 const Booking = require("../models/Booking");
 const ProviderProfile = require("../models/ProviderProfile");
 const SearchHistory = require("../models/SearchHistory");
+const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { sendSuccess } = require("../utils/apiResponse");
 const { toNumber } = require("../utils/location");
@@ -98,7 +99,7 @@ const buildProviderSort = (query, hasLocation, hasTextSearch) => {
   if (query.sort === "mostBooked") return { completedBookings: -1, rating: -1, reviewsCount: -1 };
   if (query.sort === "newest") return { createdAt: -1 };
   if (hasLocation) return { distanceMeters: 1, rating: -1, reviewsCount: -1 };
-  if (hasTextSearch) return { textScore: -1, rating: -1, reviewsCount: -1 };
+  if (hasTextSearch) return { rating: -1, reviewsCount: -1, hourlyRate: 1 };
   return { rating: -1, reviewsCount: -1, hourlyRate: 1 };
 };
 
@@ -113,6 +114,22 @@ const searchProviders = asyncHandler(async (req, res) => {
 
   if (req.user && q) {
     await recordSearch({ userId: req.user._id, keyword: q });
+  }
+
+  let textMatch = null;
+  if (q) {
+    const regex = new RegExp(q, "i");
+    const users = await User.find({ name: regex, role: "provider" }).select("_id");
+    const matchedUserIds = users.map(u => u._id);
+    
+    textMatch = {
+      $or: [
+        { category: regex },
+        { skills: regex },
+        { address: regex },
+        { userId: { $in: matchedUserIds } }
+      ]
+    };
   }
 
   if (latitude !== undefined && longitude !== undefined) {
@@ -133,23 +150,14 @@ const searchProviders = asyncHandler(async (req, res) => {
         distanceKm: { $round: [{ $divide: ["$distanceMeters", 1000] }, 2] }
       }
     });
+    if (q) {
+      pipeline.push({ $match: textMatch });
+    }
   } else {
     if (q) {
-      match.$text = { $search: q };
+      Object.assign(match, textMatch);
     }
     pipeline.push({ $match: match });
-    if (q) {
-      pipeline.push({ $addFields: { textScore: { $meta: "textScore" } } });
-    }
-  }
-
-  if (q && latitude !== undefined && longitude !== undefined) {
-    const regex = new RegExp(q, "i");
-    pipeline.push({
-      $match: {
-        $or: [{ category: regex }, { skills: regex }, { address: regex }]
-      }
-    });
   }
 
   pipeline.push(...availabilityStages);

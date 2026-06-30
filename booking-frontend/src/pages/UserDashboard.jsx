@@ -109,30 +109,61 @@ export default function UserDashboard() {
             <>
               {/* Stats Grid */}
               <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-                <div className="bg-slate-50 dark:bg-slate-800 p-8 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <p className="text-slate-500 text-sm font-semibold mb-1">Active Now</p>
-                  <p className="text-3xl font-black text-slate-900 dark:text-white">{activeBookings.length}</p>
+                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-8 rounded-3xl text-white shadow-lg shadow-indigo-500/30 transform hover:-translate-y-2 hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-6 opacity-20 transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
+                    <span className="material-symbols-outlined text-8xl">local_activity</span>
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-indigo-100 text-sm font-bold tracking-widest uppercase mb-2">Active Now</p>
+                    <p className="text-5xl font-black">{activeBookings.length}</p>
+                  </div>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800 p-8 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <p className="text-slate-500 text-sm font-semibold mb-1">Completed</p>
-                  <p className="text-3xl font-black text-slate-900 dark:text-white">{completedBookings.length}</p>
+                
+                <div className="bg-gradient-to-br from-emerald-400 to-teal-500 p-8 rounded-3xl text-white shadow-lg shadow-emerald-500/30 transform hover:-translate-y-2 hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-6 opacity-20 transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">
+                    <span className="material-symbols-outlined text-8xl">task_alt</span>
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-emerald-100 text-sm font-bold tracking-widest uppercase mb-2">Completed</p>
+                    <p className="text-5xl font-black">{completedBookings.length}</p>
+                  </div>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800 p-8 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <p className="text-slate-500 text-sm font-semibold mb-1">Total Bookings</p>
-                  <p className="text-3xl font-black text-slate-900 dark:text-white">{bookings.length}</p>
+                
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-3xl text-white shadow-lg shadow-slate-900/30 transform hover:-translate-y-2 hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-6 opacity-20 transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
+                    <span className="material-symbols-outlined text-8xl">library_books</span>
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-slate-400 text-sm font-bold tracking-widest uppercase mb-2">Total Bookings</p>
+                    <p className="text-5xl font-black">{bookings.length}</p>
+                  </div>
                 </div>
               </section>
 
               <div className="space-y-12">
                 {/* Active Bookings */}
                 <section>
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    <h3 className="text-xl font-bold tracking-tight dark:text-white">Active Appointments</h3>
+                  <div className="flex items-center gap-4 mb-8 bg-blue-50 dark:bg-blue-900/20 p-5 rounded-3xl border border-blue-100 dark:border-blue-900/50">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+                      <span className="material-symbols-outlined text-[24px]">bolt</span>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Active Appointments</h3>
+                      <p className="text-sm text-slate-500 font-medium">Services that are pending or ongoing</p>
+                    </div>
                   </div>
                   
                   {activeBookings.length === 0 ? (
-                    <p className="text-slate-500">No active bookings found.</p>
+                    <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm text-center">
+                      <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-6">
+                        <span className="material-symbols-outlined text-4xl text-indigo-500">calendar_month</span>
+                      </div>
+                      <h4 className="text-2xl font-black text-slate-900 dark:text-white mb-2">No Active Appointments</h4>
+                      <p className="text-slate-500 max-w-sm mb-8">You don't have any ongoing or upcoming service bookings at the moment.</p>
+                      <Link to="/service-listing" className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-indigo-500/30">
+                        Book a Service
+                      </Link>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                       {activeBookings.map((booking) => (
@@ -185,27 +216,51 @@ export default function UserDashboard() {
 
                 {/* Completed Bookings */}
                 <section>
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                    <h3 className="text-xl font-bold tracking-tight dark:text-white">Previous Services</h3>
+                  <div className="flex items-center gap-4 mb-8 bg-slate-100 dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 mt-20">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-700 text-white flex items-center justify-center shadow-lg shadow-slate-700/30">
+                      <span className="material-symbols-outlined text-[24px]">history</span>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Previous Services</h3>
+                      <p className="text-sm text-slate-500 font-medium">Your past service history</p>
+                    </div>
                   </div>
 
                   {completedBookings.length === 0 ? (
-                    <p className="text-slate-500">No previous bookings found.</p>
+                    <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm text-center">
+                      <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                        <span className="material-symbols-outlined text-4xl text-slate-400">history</span>
+                      </div>
+                      <h4 className="text-2xl font-black text-slate-900 dark:text-white mb-2">No History Yet</h4>
+                      <p className="text-slate-500 max-w-sm">Your completed service appointments will appear here.</p>
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {completedBookings.map((booking) => (
-                        <div key={booking._id} className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-xl flex flex-col sm:flex-row items-center gap-6 border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all duration-300">
-                          <div className="flex-1 w-full text-center sm:text-left">
-                            <h5 className="font-bold text-slate-900 dark:text-white capitalize">{booking.serviceType || 'Service'}</h5>
-                            <p className="text-xs text-slate-500">{new Date(booking.bookingDate).toLocaleDateString()}</p>
+                        <div key={booking._id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl flex flex-col justify-between border border-slate-200 dark:border-slate-700 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all duration-300 group">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                <span className="material-symbols-outlined text-2xl">check_circle</span>
+                              </div>
+                              <div>
+                                <h5 className="font-bold text-lg text-slate-900 dark:text-white capitalize leading-tight">{booking.serviceType || 'Service'}</h5>
+                                <p className="text-xs font-semibold text-slate-500 mt-1">{new Date(booking.bookingDate).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-lg text-slate-900 dark:text-white">{formatCurrency(booking.amount)}</p>
+                            </div>
                           </div>
-                          <div className="hidden md:block px-3 py-1 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                            Completed
-                          </div>
-                          <div className="text-right w-full sm:w-auto flex justify-between sm:block">
-                            <p className="font-bold text-slate-900 dark:text-white">{formatCurrency(booking.amount)}</p>
-                            <Link to={`/review?bookingId=${booking._id}`} className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider hover:underline">Write Review</Link>
+                          
+                          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                              Completed
+                            </span>
+                            <Link to={`/review?bookingId=${booking._id}`} className="flex items-center gap-1.5 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors group-hover:underline">
+                              <span className="material-symbols-outlined text-[16px]">rate_review</span>
+                              Write Review
+                            </Link>
                           </div>
                         </div>
                       ))}

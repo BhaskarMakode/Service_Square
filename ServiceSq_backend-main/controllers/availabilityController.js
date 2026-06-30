@@ -108,6 +108,10 @@ const getProviderSlots = asyncHandler(async (req, res) => {
   }
 
   const availability = await Availability.findOne({ providerId: provider._id });
+
+  if (provider.availabilityStatus !== "available" || !availability || !availability.isOnline || !availability.isAvailable) {
+    throw new AppError("Provider is currently offline or unavailable for new bookings.", 409);
+  }
   const date = new Date(`${req.query.date}T00:00:00`);
   const durationMinutes = Number(req.query.durationMinutes || 120);
   const day = WEEKDAYS[date.getDay()];

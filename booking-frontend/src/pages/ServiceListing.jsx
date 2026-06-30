@@ -213,7 +213,17 @@ export default function ServiceListing() {
         
         {/* Search & Location Bar */}
         <div className="bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-6 lg:px-10 py-5 flex flex-col md:flex-row items-center gap-6 sticky top-20 z-30">
-          <div className="w-full md:w-auto flex-1 max-w-3xl flex flex-col sm:flex-row items-center gap-4">
+          <div className="w-full md:w-auto flex-1 max-w-4xl flex flex-col sm:flex-row items-center gap-4">
+            {/* Global Search */}
+            <div className="flex w-full sm:w-auto items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-3 rounded-full flex-1 min-w-[250px] shadow-sm focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-shadow">
+              <span className="material-symbols-outlined text-indigo-600 text-[20px]">search</span>
+              <input 
+                  className="bg-transparent border-none text-sm font-semibold text-slate-900 dark:text-white outline-none w-full placeholder-slate-400"
+                  placeholder="Search for providers, services, categories..."
+                  value={filters.q} 
+                  onChange={(event) => updateFilters({ q: event.target.value })} 
+              />
+            </div>
             {/* Location Selector */}
             <div className="flex w-full sm:w-auto items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-3 rounded-full min-w-[250px] shadow-sm focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-shadow">
               <span className="material-symbols-outlined text-indigo-600 text-[20px]">location_on</span>
