@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { categoriesApi } from '../services/serviceApi';
 
+const PREDEFINED_CATEGORIES = [
+  'Electrician', 'Plumber', 'Carpenter', 'Painter', 'AC Repair', 'Appliance Repair', 
+  'Cleaning', 'Pest Control', 'Beauty Services', 'Salon Services', 'Home Tutor', 
+  'Fitness Trainer', 'Photographer', 'Event Planner', 'Driver'
+];
+
 export default function ProviderOnboardingStep2() {
   const navigate = useNavigate();
 
@@ -69,23 +75,6 @@ export default function ProviderOnboardingStep2() {
 
   return (
     <>
-      {/* TopNavBar */}
-      <header className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm dark:shadow-none">
-        <div className="flex justify-between items-center h-16 px-6 max-w-7xl mx-auto font-sans antialiased text-slate-900 dark:text-slate-100">
-          <div className="text-xl font-black tracking-tight text-indigo-700 dark:text-indigo-400">
-            Service Square
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-full active:scale-95 duration-200">
-              <span className="material-symbols-outlined">help</span>
-            </button>
-            <button onClick={() => navigate('/')} className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-full active:scale-95 duration-200">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-7xl mx-auto px-6 pt-12 pb-24">
         {/* Progress Indicator */}
         <div className="max-w-2xl mx-auto mb-16">
@@ -130,23 +119,24 @@ export default function ProviderOnboardingStep2() {
               <div className="space-y-2.5">
                 <label className="block text-sm font-semibold text-on-surface ml-1">Service Category</label>
                 <div className="relative group">
-                  <select 
+                  <input 
+                    list="service-categories-list"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-surface-container-high border-none rounded-xl py-4 px-5 text-on-surface focus:ring-2 focus:ring-primary-fixed focus:bg-surface-container-lowest transition-all appearance-none cursor-pointer capitalize"
+                    className="w-full bg-surface-container-high border-none rounded-xl py-4 px-5 pr-12 text-on-surface focus:ring-2 focus:ring-primary-fixed focus:bg-surface-container-lowest transition-all appearance-none capitalize"
+                    placeholder="Search or type your trade..."
                     required
-                  >
-                    <option value="" disabled>Select your trade...</option>
-                    {loadingCats ? (
-                      <option disabled>Loading categories...</option>
-                    ) : (
-                      categories.map((cat) => (
-                        <option key={cat._id} value={cat.slug}>{cat.name}</option>
-                      ))
-                    )}
-                  </select>
+                  />
+                  <datalist id="service-categories-list">
+                    {PREDEFINED_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat} />
+                    ))}
+                    {!loadingCats && categories.map((cat) => (
+                      <option key={cat._id} value={cat.name} />
+                    ))}
+                  </datalist>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
-                    <span className="material-symbols-outlined">expand_more</span>
+                    <span className="material-symbols-outlined">search</span>
                   </div>
                 </div>
               </div>

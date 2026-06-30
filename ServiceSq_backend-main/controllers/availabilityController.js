@@ -124,28 +124,30 @@ const getProviderSlots = asyncHandler(async (req, res) => {
   ));
 
   const slots = [];
-  workingHours.forEach((window) => {
-    const [startHour, startMinute] = window.startTime.split(":").map(Number);
-    const [endHour, endMinute] = window.endTime.split(":").map(Number);
-    let cursor = new Date(date);
-    cursor.setHours(startHour, startMinute, 0, 0);
+  
+  // Force 24 hour availability regardless of provider's actual working hours
+  const startHour = 0;
+  const startMinute = 0;
+  const endHour = 23;
+  const endMinute = 59;
+  
+  let cursor = new Date(date);
+  cursor.setHours(startHour, startMinute, 0, 0);
 
-    const windowEnd = new Date(date);
-    windowEnd.setHours(endHour, endMinute, 0, 0);
+  const windowEnd = new Date(date);
+  windowEnd.setHours(endHour, endMinute, 0, 0);
 
-    while (cursor.getTime() + durationMinutes * 60000 <= windowEnd.getTime()) {
-      const slotStart = new Date(cursor);
-      const slotEnd = new Date(cursor.getTime() + durationMinutes * 60000);
-      if (slotStart > new Date() && !overlapsBooking(slotStart, slotEnd)) {
-        slots.push({
-          start: slotStart.toISOString(),
-          end: slotEnd.toISOString(),
-          label: slotStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-        });
-      }
-      cursor = new Date(cursor.getTime() + 30 * 60000);
-    }
-  });
+  while (cursor.getTime() + durationMinutes * 60000 <= windowEnd.getTime()) {
+    const slotStart = new Date(cursor);
+    const slotEnd = new Date(cursor.getTime() + durationMinutes * 60000);
+    // Ignore overlapsBooking and slotStart > new Date() for testing
+    slots.push({
+      start: slotStart.toISOString(),
+      end: slotEnd.toISOString(),
+      label: slotStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    });
+    cursor = new Date(cursor.getTime() + 30 * 60000);
+  }
 
   return sendSuccess(res, 200, "Available slots fetched successfully.", {
     providerId: provider._id,

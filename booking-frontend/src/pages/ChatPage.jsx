@@ -133,22 +133,7 @@ export default function ChatPage() {
 
   return (
     <>
-      <header className="sticky top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-sm font-['Inter'] antialiased tracking-tight">
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-6 h-20">
-          <Link to="/" className="text-2xl font-black tracking-tighter text-indigo-700">Service Square</Link>
-          <nav className="hidden md:flex items-center gap-8">
-            <Link className="text-slate-600 font-medium hover:text-indigo-500 transition-colors" to="/">Home</Link>
-            <Link className="text-slate-600 font-medium hover:text-indigo-500 transition-colors" to="/services">Services</Link>
-            {user?.role === 'customer' && <Link className="text-slate-600 font-medium hover:text-indigo-500 transition-colors" to="/provider-onboarding-1">Become a Provider</Link>}
-            {user && <Link className="text-slate-600 font-medium hover:text-indigo-500 transition-colors" to={user.role === 'customer' ? '/user-dashboard' : '/provider-panel'}>Dashboard</Link>}
-          </nav>
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden bg-slate-100">
-              <img src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=4F46E5&color=fff`} alt="User" className="w-full h-full object-cover" />
-            </div>
-          </div>
-        </div>
-      </header>
+
 
       <main className="max-w-7xl mx-auto px-6 py-8 h-[calc(100vh-10rem)] min-h-[600px] font-body text-on-surface">
         <div className="flex h-full gap-6">

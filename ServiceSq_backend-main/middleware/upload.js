@@ -19,9 +19,9 @@ const makeUpload = (allowedMimeTypes) => {
   });
 };
 
-const profileImageUpload = makeUpload(["image/jpeg", "image/png"]);
-const documentUpload = makeUpload(["image/jpeg", "image/png", "application/pdf"]);
-const portfolioImageUpload = makeUpload(["image/jpeg", "image/png"]);
+const profileImageUpload = makeUpload(["image/jpeg", "image/png", "image/webp"]);
+const documentUpload = makeUpload(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const portfolioImageUpload = makeUpload(["image/jpeg", "image/png", "image/webp"]);
 
 module.exports = {
   documentUpload,

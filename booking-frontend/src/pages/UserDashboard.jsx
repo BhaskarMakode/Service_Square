@@ -7,6 +7,7 @@ export default function UserDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -27,6 +28,21 @@ export default function UserDashboard() {
 
   const activeBookings = bookings.filter(b => ['pending', 'accepted'].includes(b.status));
   const completedBookings = bookings.filter(b => b.status === 'completed');
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    try {
+      setCancellingId(bookingId);
+      const res = await apiClient.put(`/bookings/${bookingId}/status`, { status: 'cancelled' });
+      if (res.data.success) {
+        setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: 'cancelled' } : b));
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Failed to cancel booking");
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   return (
     <>
@@ -59,7 +75,11 @@ export default function UserDashboard() {
               <span>Support</span>
             </Link>
           </nav>
-          <div className="mt-auto pt-6 px-4">
+          <div className="mt-auto pt-6 px-4 space-y-3">
+            <Link to="/provider" className="w-full inline-flex justify-center items-center gap-2 py-3 bg-white dark:bg-slate-900 border-2 border-indigo-100 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+              <span className="material-symbols-outlined text-sm">storefront</span>
+              Become a Provider
+            </Link>
             <Link to="/service-listing" className="w-full inline-flex justify-center py-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 active:scale-95 transition-transform duration-200">
               Book New Service
             </Link>
@@ -74,9 +94,17 @@ export default function UserDashboard() {
           </header>
 
           {loading ? (
-            <div className="text-center py-10">Loading bookings...</div>
+            <div className="animate-pulse space-y-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+                <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+              </div>
+              <div className="h-64 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+              <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+            </div>
           ) : error ? (
-            <div className="text-red-500 py-10">{error}</div>
+            <div className="text-red-500 py-10 font-bold bg-red-50 dark:bg-red-900/20 p-6 rounded-xl">{error}</div>
           ) : (
             <>
               {/* Stats Grid */}
@@ -108,7 +136,7 @@ export default function UserDashboard() {
                   ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                       {activeBookings.map((booking) => (
-                        <div key={booking._id} className="bg-white dark:bg-slate-900 p-6 rounded-xl flex flex-col justify-between border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all">
+                        <div key={booking._id} className="bg-white dark:bg-slate-900 p-6 rounded-xl flex flex-col justify-between border border-slate-200 dark:border-slate-700 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300 group">
                           <div className="flex-1 flex flex-col">
                             <div className="flex justify-between items-start mb-2">
                               <div className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
@@ -139,6 +167,15 @@ export default function UserDashboard() {
                               <span className="material-symbols-outlined text-sm">chat_bubble</span>
                               Message
                             </Link>
+                            {booking.status === 'pending' && (
+                              <button 
+                                onClick={() => handleCancelBooking(booking._id)}
+                                disabled={cancellingId === booking._id}
+                                className="flex-1 text-center py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                              >
+                                {cancellingId === booking._id ? 'Cancelling...' : 'Cancel Booking'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -158,7 +195,7 @@ export default function UserDashboard() {
                   ) : (
                     <div className="grid grid-cols-1 gap-4">
                       {completedBookings.map((booking) => (
-                        <div key={booking._id} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-6 border border-slate-100 dark:border-slate-700">
+                        <div key={booking._id} className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-xl flex flex-col sm:flex-row items-center gap-6 border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all duration-300">
                           <div className="flex-1 w-full text-center sm:text-left">
                             <h5 className="font-bold text-slate-900 dark:text-white capitalize">{booking.serviceType || 'Service'}</h5>
                             <p className="text-xs text-slate-500">{new Date(booking.bookingDate).toLocaleDateString()}</p>

@@ -22,11 +22,7 @@ const resolveActiveCategory = async (categoryValue) => {
     deletedAt: null
   });
 
-  if (!category) {
-    throw new AppError("Active service category not found.", 400);
-  }
-
-  return category;
+  return category; // Return null if not found instead of throwing error
 };
 
 const buildProfilePayload = async (body, requireLocation = false) => {
@@ -34,9 +30,13 @@ const buildProfilePayload = async (body, requireLocation = false) => {
 
   if (body.category !== undefined) {
     const category = await resolveActiveCategory(body.category);
-    payload.category = category.slug;
-    payload.categoryId = category._id;
-    payload._resolvedCategory = category;
+    if (category) {
+      payload.category = category.slug;
+      payload.categoryId = category._id;
+      payload._resolvedCategory = category;
+    } else {
+      payload.category = slugify(body.category);
+    }
   }
 
   if (body.skills !== undefined) payload.skills = normalizeSkills(body.skills);

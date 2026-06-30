@@ -71,7 +71,7 @@ export default function Header() {
             </button>
           )}
           <Link to="/" className="text-2xl font-black tracking-tighter text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
-            <span className="w-8 h-8 bg-indigo-600 rounded-lg inline-block"></span>
+            <img src="/logo.svg" alt="Logo" className="w-8 h-8" />
             Service Square
           </Link>
         </div>

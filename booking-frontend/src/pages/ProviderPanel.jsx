@@ -80,7 +80,23 @@ export default function ProviderPanel() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-slate-500 font-bold animate-pulse">Loading Provider Dashboard...</div>;
+    return (
+      <div className="min-h-screen p-6 md:p-10 bg-slate-50 dark:bg-slate-900">
+        <div className="max-w-7xl mx-auto animate-pulse">
+          <div className="h-20 bg-slate-200 dark:bg-slate-800 rounded-2xl mb-10 w-full"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 h-48 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+              <div className="h-48 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+            </div>
+            <div className="lg:col-span-4 lg:row-span-2 space-y-6">
+              <div className="h-[600px] bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+            </div>
+            <div className="lg:col-span-8 h-[400px] bg-slate-200 dark:bg-slate-800 rounded-2xl mt-6"></div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Calculate metrics
@@ -249,9 +265,9 @@ export default function ProviderPanel() {
                     </div>
                   ) : (
                     pendingRequests.map(job => (
-                      <div key={job._id} className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl group hover:shadow-md transition-all">
+                      <div key={job._id} className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                         <div className="flex justify-between items-start mb-3">
-                          <div className="font-bold text-slate-900 dark:text-white capitalize leading-tight pr-2">{job.serviceType}</div>
+                          <div className="font-bold text-slate-900 dark:text-white capitalize leading-tight pr-2 group-hover:text-indigo-600 transition-colors">{job.serviceType}</div>
                           <div className="text-indigo-600 dark:text-indigo-400 font-black text-lg">{formatCurrency(job.amount)}</div>
                         </div>
                         
@@ -325,7 +341,7 @@ export default function ProviderPanel() {
                     const theme = colorThemes[idx % colorThemes.length];
 
                     return (
-                      <div key={job._id} className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-md transition-all group relative overflow-hidden">
+                      <div key={job._id} className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-lg hover:scale-[1.01] transition-all duration-300 group relative overflow-hidden">
                         {isToday && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500"></div>}
                         
                         <div className={`flex flex-col items-center justify-center min-w-[70px] h-[70px] rounded-xl ${theme} shrink-0`}>

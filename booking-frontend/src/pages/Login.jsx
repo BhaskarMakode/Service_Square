@@ -23,6 +23,10 @@ export default function Login() {
       setError("Please enter your phone number.");
       return;
     }
+    if (loginMode === 'user' && !/^\d{10}$/.test(phone)) {
+      setError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
     if (loginMode === 'admin' && !email.trim()) {
       setError("Please enter the configured super admin email.");
       return;
@@ -137,14 +141,25 @@ export default function Login() {
         {!otpSent ? (
           <form className="space-y-5" onSubmit={handleSendOtp}>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">Phone Number</label>
-              <input 
-                type="tel" 
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" 
-                placeholder="+919876543210" 
-              />
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 ml-1">Mobile Number (10 digits)</label>
+              <div className="relative flex items-center">
+                <div className="absolute left-4 text-slate-500 dark:text-slate-400 font-bold border-r border-slate-300 dark:border-slate-600 pr-3">+91</div>
+                <input 
+                  type="tel" 
+                  value={phone}
+                  onChange={(e) => {
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    if (numericValue.length <= 10) setPhone(numericValue);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Backspace' && e.key !== 'Tab' && e.key !== 'Enter' && !/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl py-3.5 pl-[72px] pr-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium tracking-wide" 
+                  placeholder="9876543210" 
+                />
+              </div>
             </div>
             {loginMode === 'admin' && (
               <div>

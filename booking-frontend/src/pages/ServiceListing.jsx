@@ -43,7 +43,7 @@ export default function ServiceListing() {
   const [locationNotice, setLocationNotice] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [coords, setCoords] = useState(null);
-  const [manualCoords, setManualCoords] = useState({ latitude: '', longitude: '' });
+  const [locationSearch, setLocationSearch] = useState('');
 
   const [filters, setFilters] = useState({
     q: searchParams.get('q') || '',
@@ -89,10 +89,6 @@ export default function ServiceListing() {
           longitude: position.coords.longitude
         };
         setCoords(nextCoords);
-        setManualCoords({
-          latitude: String(nextCoords.latitude.toFixed(6)),
-          longitude: String(nextCoords.longitude.toFixed(6))
-        });
         setLocationNotice('Using your current location for nearby services.');
         setGeoLoading(false);
       },
@@ -109,15 +105,31 @@ export default function ServiceListing() {
     setFilters((current) => ({ ...current, ...patch, page: patch.page || 1 }));
   };
 
-  const applyManualLocation = () => {
-    const latitude = Number(manualCoords.latitude);
-    const longitude = Number(manualCoords.longitude);
-    if (Number.isNaN(latitude) || latitude < -90 || latitude > 90 || Number.isNaN(longitude) || longitude < -180 || longitude > 180) {
-      setLocationNotice('Enter valid latitude (-90 to 90) and longitude (-180 to 180).');
+  const applyManualLocation = async () => {
+    if (!locationSearch.trim()) {
+      setLocationNotice('Please enter a city or area name.');
       return;
     }
-    setCoords({ latitude, longitude });
-    setLocationNotice('Using your manually entered location.');
+    setGeoLoading(true);
+    setLocationNotice('Searching for location...');
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationSearch)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setCoords({
+          latitude: Number(data[0].lat),
+          longitude: Number(data[0].lon)
+        });
+        setLocationNotice(`Using location: ${data[0].display_name.split(',')[0]}`);
+        setLocationSearch('');
+      } else {
+        setLocationNotice('Location not found. Try a different city name.');
+      }
+    } catch (err) {
+      setLocationNotice('Failed to search location. Try again.');
+    } finally {
+      setGeoLoading(false);
+    }
   };
 
   const resetFilters = () => {
@@ -196,234 +208,326 @@ export default function ServiceListing() {
   const handlePageChange = (page) => updateFilters({ page });
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-12 flex gap-10 bg-slate-50 dark:bg-slate-900 min-h-screen">
-      <aside className="hidden lg:flex flex-col w-80 shrink-0 gap-8">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl sticky top-28 shadow-sm border border-slate-100 dark:border-slate-700 max-h-[calc(100vh-8rem)] overflow-y-auto">
-          <div className="mb-8">
-            <BackButton fallback="/" className="mb-5" />
-            <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Filters</h2>
-            <p className="text-slate-500 text-sm mt-1">Live approved services near you</p>
-          </div>
-
-          <div className="space-y-7">
-            <div>
-              <label className="flex items-center gap-3 text-slate-500 font-medium mb-3">
-                <span className="material-symbols-outlined">search</span>
-                <span className="text-sm">Search</span>
-              </label>
-              <input className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm" placeholder="Search service or skill" value={filters.q} onChange={(event) => updateFilters({ q: event.target.value })} />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-indigo-600 font-bold mb-4">
-                <span className="material-symbols-outlined">category</span>
-                <span className="text-sm">Categories</span>
-              </div>
-              <select className="w-full px-3 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold" value={filters.category} onChange={(event) => updateFilters({ category: event.target.value })}>
-                <option value="">All Categories</option>
-                {categories.map((cat) => <option key={cat._id} value={cat.slug}>{cat.name}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-slate-500 font-medium mb-4">
-                <span className="material-symbols-outlined">my_location</span>
-                <span className="text-sm">Location</span>
-              </div>
-              <button type="button" onClick={() => requestCurrentLocation()} className="w-full py-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-xl font-bold mb-3 disabled:opacity-60" disabled={geoLoading}>
-                {geoLoading ? 'Detecting...' : 'Use Current Location'}
+    <div className="bg-slate-50 dark:bg-slate-950 min-h-screen font-['Inter'] text-sm">
+      <main className="max-w-[1600px] mx-auto flex flex-col relative">
+        
+        {/* Search & Location Bar */}
+        <div className="bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-6 lg:px-10 py-5 flex flex-col md:flex-row items-center gap-6 sticky top-20 z-30">
+          <div className="w-full md:w-auto flex-1 max-w-3xl flex flex-col sm:flex-row items-center gap-4">
+            {/* Location Selector */}
+            <div className="flex w-full sm:w-auto items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-3 rounded-full min-w-[250px] shadow-sm focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-shadow">
+              <span className="material-symbols-outlined text-indigo-600 text-[20px]">location_on</span>
+              <input 
+                  className="bg-transparent border-none text-sm font-semibold text-slate-900 dark:text-white outline-none w-full placeholder-slate-400"
+                  placeholder="e.g. Mumbai, Delhi"
+                  value={locationSearch} 
+                  onChange={(event) => setLocationSearch(event.target.value)} 
+                  onKeyDown={(e) => { if(e.key === 'Enter') applyManualLocation(); }}
+              />
+              <button onClick={applyManualLocation} className="text-slate-400 hover:text-indigo-600 pr-2 border-r border-slate-200 dark:border-slate-700" title="Search Location">
+                <span className="material-symbols-outlined text-[20px]">search</span>
               </button>
-              <div className="grid grid-cols-2 gap-2">
-                <input className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm" placeholder="Latitude" value={manualCoords.latitude} onChange={(event) => setManualCoords((current) => ({ ...current, latitude: event.target.value }))} />
-                <input className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm" placeholder="Longitude" value={manualCoords.longitude} onChange={(event) => setManualCoords((current) => ({ ...current, longitude: event.target.value }))} />
-              </div>
-              <button type="button" onClick={applyManualLocation} className="mt-2 w-full py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold">Apply Manual Location</button>
+              <button onClick={() => requestCurrentLocation()} className="text-slate-400 hover:text-indigo-600 pl-1" title="Use Current Location">
+                <span className="material-symbols-outlined text-[20px]">my_location</span>
+              </button>
             </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-slate-500 font-medium mb-4">
-                <span className="material-symbols-outlined">near_me</span>
-                <span className="text-sm">Distance</span>
-              </div>
-              <select className="w-full px-3 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold" value={filters.radius} onChange={(event) => updateFilters({ radius: event.target.value })}>
-                {distanceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-slate-500 font-medium mb-4">
-                <span className="material-symbols-outlined">payments</span>
-                <span className="text-sm">Price Range</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm" type="number" min="0" placeholder="Min Rs." value={filters.minPrice} onChange={(event) => updateFilters({ minPrice: event.target.value })} />
-                <input className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm" type="number" min="0" placeholder="Max Rs." value={filters.maxPrice} onChange={(event) => updateFilters({ maxPrice: event.target.value })} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-slate-500 font-medium mb-4">
-                <span className="material-symbols-outlined">star</span>
-                <span className="text-sm">Rating</span>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {['4', '3', '2'].map((rating) => (
-                  <button key={rating} type="button" onClick={() => updateFilters({ minRating: filters.minRating === rating ? '' : rating })} className={`py-2 rounded-lg font-bold border-2 transition-colors ${filters.minRating === rating ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-amber-400' : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-700'}`}>
-                    {rating}+
-                  </button>
-                ))}
-                <button type="button" onClick={() => updateFilters({ minRating: '' })} className={`py-2 rounded-lg font-bold border-2 transition-colors ${!filters.minRating ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-indigo-400' : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-700'}`}>
-                  Any
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-slate-500 font-medium mb-4">
-                <span className="material-symbols-outlined">workspace_premium</span>
-                <span className="text-sm">Experience</span>
-              </div>
-              <select className="w-full px-3 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold" value={filters.minExperience} onChange={(event) => updateFilters({ minExperience: event.target.value })}>
-                <option value="">Any experience</option>
-                <option value="1">1+ years</option>
-                <option value="3">3+ years</option>
-                <option value="5">5+ years</option>
-                <option value="10">10+ years</option>
-              </select>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-slate-500 font-medium mb-4">
-                <span className="material-symbols-outlined">event_available</span>
-                <span className="text-sm">Availability</span>
-              </div>
-              <select className="w-full px-3 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold" value={filters.availabilityStatus} onChange={(event) => updateFilters({ availabilityStatus: event.target.value })}>
-                <option value="">Any status</option>
-                <option value="available">Available now</option>
-                <option value="busy">Busy</option>
-                <option value="offline">Offline</option>
-              </select>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-3 text-slate-500 font-medium mb-4">
-                <span className="material-symbols-outlined">sort</span>
-                <span className="text-sm">Sort</span>
-              </div>
-              <select className="w-full px-3 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold" value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value })}>
-                {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </div>
-
-            <button onClick={resetFilters} className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl font-bold transition-all active:scale-[0.98]">
-              Reset Filters
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <section className="flex-1">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10">
-          <div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Home Services</h1>
-            <p className="text-slate-500 mt-2 font-medium">{pagination.total} active service{pagination.total !== 1 ? 's' : ''} found.</p>
-            {locationNotice && <p className="text-sm text-slate-500 mt-2 max-w-2xl">{locationNotice}</p>}
-          </div>
-          <div className="lg:hidden grid grid-cols-2 gap-3 w-full md:w-auto">
-            <select className="px-3 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold" value={filters.radius} onChange={(event) => updateFilters({ radius: event.target.value })}>
-              {distanceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-            <select className="px-3 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold" value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value })}>
-              {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20 text-slate-500">Loading services...</div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
-            <span className="material-symbols-outlined text-6xl text-rose-300 mb-4">error</span>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Could not load services</h3>
-            <p className="text-rose-500 mt-2">{error}</p>
-          </div>
-        ) : providers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
-            <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">search_off</span>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">No services found</h3>
-            <p className="text-slate-500 mt-2 text-center max-w-md">Try widening the distance filter, selecting Anywhere, or clearing filters.</p>
-            <button onClick={resetFilters} className="mt-6 px-6 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition-colors">Clear Filters</button>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-              {providers.map((provider) => {
-                const name = providerName(provider);
-                const distance = toFixedDistance(provider.distanceKm);
-                const eta = arrivalEstimate(provider.distanceKm);
-                const service = serviceName(provider);
-                return (
-                  <div key={provider._id} className="group bg-white dark:bg-slate-800 rounded-[2rem] p-4 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 border border-slate-100 dark:border-slate-700 transition-all duration-500 flex flex-col">
-                    <div className="relative overflow-hidden rounded-[1.5rem] mb-6 shrink-0 bg-indigo-50">
-                      <img className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-700" alt={name} src={providerAvatar(provider) || `https://ui-avatars.com/api/?name=${name}&background=4F46E5&color=fff&size=256`} />
-                      <div className="absolute top-4 right-4 backdrop-blur-md bg-white/85 dark:bg-slate-900/85 px-4 py-1.5 rounded-full shadow-sm flex items-center gap-1">
-                        <span className="material-symbols-outlined text-amber-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">{provider.rating ? Number(provider.rating).toFixed(1) : 'New'}</span>
-                        <span className="text-xs text-slate-400">({provider.reviewsCount || 0})</span>
-                      </div>
-                      <div className="absolute top-4 left-4 backdrop-blur-md bg-emerald-50/90 text-emerald-700 px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1 text-xs font-black">
-                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                        Approved
-                      </div>
+        <div className="flex flex-col lg:flex-row px-6 lg:px-10 py-8 gap-10 w-full">
+          
+          {/* Filter Sidebar */}
+          <aside className="w-full lg:w-72 shrink-0">
+            <div className="lg:sticky lg:top-48 space-y-8 pr-2">
+              
+              {/* Categories */}
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white flex items-center justify-between mb-4 cursor-pointer text-sm">
+                  Category
+                  <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_less</span>
+                </h3>
+                <select className="w-full px-3 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" value={filters.category} onChange={(event) => updateFilters({ category: event.target.value })}>
+                  <option value="">All Categories</option>
+                  {categories.map((cat) => <option key={cat._id} value={cat.slug}>{cat.name}</option>)}
+                </select>
+              </div>
+
+              {/* Distance */}
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white flex items-center justify-between mb-4 cursor-pointer text-sm border-t border-slate-100 dark:border-slate-800 pt-6">
+                  Distance
+                  <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_less</span>
+                </h3>
+                <select className="w-full px-3 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" value={filters.radius} onChange={(event) => updateFilters({ radius: event.target.value })}>
+                  {distanceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white flex items-center justify-between mb-4 cursor-pointer text-sm border-t border-slate-100 dark:border-slate-800 pt-6">
+                  Price Range
+                  <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_less</span>
+                </h3>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="radio" name="priceRange" className="w-4 h-4 text-indigo-600 focus:ring-indigo-600 border-slate-300 cursor-pointer" 
+                           checked={!filters.minPrice && !filters.maxPrice} 
+                           onChange={() => updateFilters({ minPrice: '', maxPrice: '' })} />
+                    <span className={`text-sm ${!filters.minPrice && !filters.maxPrice ? 'text-indigo-600 font-bold' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>All Prices</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="radio" name="priceRange" className="w-4 h-4 text-indigo-600 focus:ring-indigo-600 border-slate-300 cursor-pointer" 
+                           checked={filters.maxPrice === '499'} 
+                           onChange={() => updateFilters({ minPrice: '', maxPrice: '499' })} />
+                    <span className={`text-sm ${filters.maxPrice === '499' ? 'text-indigo-600 font-bold' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>Under ₹499</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="radio" name="priceRange" className="w-4 h-4 text-indigo-600 focus:ring-indigo-600 border-slate-300 cursor-pointer" 
+                           checked={filters.minPrice === '500' && filters.maxPrice === '999'} 
+                           onChange={() => updateFilters({ minPrice: '500', maxPrice: '999' })} />
+                    <span className={`text-sm ${filters.minPrice === '500' && filters.maxPrice === '999' ? 'text-indigo-600 font-bold' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>₹500 - ₹999</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="radio" name="priceRange" className="w-4 h-4 text-indigo-600 focus:ring-indigo-600 border-slate-300 cursor-pointer" 
+                           checked={filters.minPrice === '1000' && filters.maxPrice === '1999'} 
+                           onChange={() => updateFilters({ minPrice: '1000', maxPrice: '1999' })} />
+                    <span className={`text-sm ${filters.minPrice === '1000' && filters.maxPrice === '1999' ? 'text-indigo-600 font-bold' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>₹1000 - ₹1999</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="radio" name="priceRange" className="w-4 h-4 text-indigo-600 focus:ring-indigo-600 border-slate-300 cursor-pointer" 
+                           checked={filters.minPrice === '2000'} 
+                           onChange={() => updateFilters({ minPrice: '2000', maxPrice: '' })} />
+                    <span className={`text-sm ${filters.minPrice === '2000' ? 'text-indigo-600 font-bold' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>Above ₹2000</span>
+                  </label>
+                  
+                  {/* Slider visualization */}
+                  <div className="pt-3 pb-1">
+                     <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full relative">
+                        <div className="absolute h-full bg-indigo-600 rounded-full left-0 right-1/4"></div>
+                        <div className="absolute w-3 h-3 bg-indigo-600 border-2 border-white rounded-full top-1/2 -translate-y-1/2 left-0 shadow"></div>
+                        <div className="absolute w-3 h-3 bg-indigo-600 border-2 border-white rounded-full top-1/2 -translate-y-1/2 right-1/4 shadow"></div>
+                     </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white dark:bg-slate-900 px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 flex-1 text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <span className="text-slate-400">₹</span>
+                      <input type="number" className="bg-transparent border-none w-full outline-none p-0 focus:ring-0" placeholder="0" value={filters.minPrice} onChange={(e) => updateFilters({ minPrice: e.target.value })} />
                     </div>
-                    <div className="px-2 pb-2 flex-1 flex flex-col">
-                      <div className="flex justify-between items-start gap-3 mb-2">
-                        <div>
-                          <h3 className="text-xl font-extrabold text-slate-900 dark:text-white capitalize">{service}</h3>
-                          <p className="text-slate-500 text-sm font-semibold capitalize mt-1">{name}</p>
-                        </div>
-                        <span className="text-lg font-black text-indigo-600 text-right">{formatRate(provider.hourlyRate || 0)}</span>
-                      </div>
-                      <p className="text-slate-500 text-sm font-medium mb-5 capitalize">{categoryName(provider)}</p>
-                      <div className="grid grid-cols-2 gap-3 mb-6 text-slate-500 mt-auto">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-indigo-400 text-lg">near_me</span>
-                          <span className="text-xs font-bold">{distance}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-sky-400 text-lg">schedule</span>
-                          <span className="text-xs font-bold">{eta || 'ETA unavailable'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-purple-400 text-lg">work_history</span>
-                          <span className="text-xs font-bold">{provider.experience || 0}+ yrs Exp</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`material-symbols-outlined text-lg ${provider.availabilityStatus === 'available' ? 'text-emerald-400' : 'text-slate-400'}`}>radio_button_checked</span>
-                          <span className="text-xs font-bold capitalize">{provider.availabilityStatus || 'available'}</span>
-                        </div>
-                      </div>
-                      <Link to={`/provider-details?id=${provider._id}`} className="block w-full py-4 text-center bg-slate-50 dark:bg-slate-700/50 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white transition-all duration-300">View Details</Link>
+                    <span className="text-slate-400 text-xs font-medium">to</span>
+                    <div className="bg-white dark:bg-slate-900 px-2 py-1.5 rounded border border-slate-200 dark:border-slate-700 flex-1 text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <span className="text-slate-400">₹</span>
+                      <input type="number" className="bg-transparent border-none w-full outline-none p-0 focus:ring-0" placeholder="5000" value={filters.maxPrice} onChange={(e) => updateFilters({ maxPrice: e.target.value })} />
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white flex items-center justify-between mb-4 cursor-pointer text-sm border-t border-slate-100 dark:border-slate-800 pt-6">
+                  Rating
+                  <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_less</span>
+                </h3>
+                <div className="grid grid-cols-4 gap-2">
+                  {['4', '3', '2'].map((rating) => (
+                    <button key={rating} type="button" onClick={() => updateFilters({ minRating: filters.minRating === rating ? '' : rating })} className={`py-1.5 rounded-md font-bold text-xs border transition-colors flex items-center justify-center gap-0.5 ${filters.minRating === rating ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-amber-400' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                      {rating}+ <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => updateFilters({ minRating: '' })} className={`py-1.5 rounded-md font-bold text-xs border transition-colors ${!filters.minRating ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-indigo-400' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                    Any
+                  </button>
+                </div>
+              </div>
+
+
+
+              <button onClick={resetFilters} className="w-full py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-2 mt-6">
+                Reset Filters
+                <span className="material-symbols-outlined text-[16px]">sync</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Service List Area */}
+          <section className="flex-1 min-w-0">
+            
+            {/* Header & Sort */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  All Services
+                  {locationNotice && <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200/50 uppercase tracking-widest">{locationNotice}</span>}
+                </h1>
+                <p className="text-slate-500 text-sm mt-1">Find the best professionals for your needs</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="hidden md:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                   <button className="p-1.5 bg-white dark:bg-slate-700 shadow-sm rounded-md text-slate-900 dark:text-white flex items-center justify-center"><span className="material-symbols-outlined text-[18px]">format_list_bulleted</span></button>
+                   <button className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-md flex items-center justify-center"><span className="material-symbols-outlined text-[18px]">grid_view</span></button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500 font-medium">Sort by:</span>
+                  <select className="px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 min-w-[140px] shadow-sm" value={filters.sort} onChange={(event) => updateFilters({ sort: event.target.value })}>
+                    {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
 
-            {pagination.pages > 1 && (
-              <div className="mt-20 flex justify-center items-center gap-4">
-                <button onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page === 1} className="w-12 h-12 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:border-indigo-600 hover:text-indigo-600 disabled:opacity-50 transition-all">
-                  <span className="material-symbols-outlined">chevron_left</span>
-                </button>
-                <span className="px-4 py-2 font-bold text-slate-700 dark:text-slate-300">Page {pagination.page} of {pagination.pages}</span>
-                <button onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page === pagination.pages} className="w-12 h-12 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:border-indigo-600 hover:text-indigo-600 disabled:opacity-50 transition-all">
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </button>
+            {/* List */}
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="material-symbols-outlined text-6xl text-rose-300 mb-4">error</span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Could not load services</h3>
+                <p className="text-rose-500 mt-2">{error}</p>
+              </div>
+            ) : providers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">search_off</span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">No services found</h3>
+                <p className="text-slate-500 mt-2 text-center max-w-md">Try widening the distance filter, changing location, or clearing filters.</p>
+                <button onClick={resetFilters} className="mt-6 px-6 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition-colors">Clear Filters</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {providers.map((provider) => {
+                  const name = providerName(provider);
+                  const distance = toFixedDistance(provider.distanceKm);
+                  const eta = arrivalEstimate(provider.distanceKm);
+                  const service = serviceName(provider);
+                  const avatar = providerAvatar(provider) || `https://ui-avatars.com/api/?name=${name}&background=4F46E5&color=fff&size=256`;
+                  
+                  return (
+                    <div key={provider._id} className="group bg-white dark:bg-slate-900 rounded-2xl p-4 flex flex-col md:flex-row gap-6 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all duration-300">
+                      
+                      {/* Image Column */}
+                      <div className="relative w-full md:w-[240px] h-48 md:h-auto shrink-0 rounded-xl overflow-hidden bg-slate-100">
+                        <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={name} src={avatar} />
+                        {provider.availabilityStatus === 'available' && (
+                          <div className="absolute bottom-3 left-3 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm uppercase tracking-widest">
+                            Available Now
+                          </div>
+                        )}
+                        <button className="absolute top-3 right-3 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-white shadow-sm transition-all">
+                          <span className="material-symbols-outlined text-[16px]">favorite_border</span>
+                        </button>
+                      </div>
+
+                      {/* Content Column */}
+                      <div className="flex-1 flex flex-col justify-between py-1">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h2 className="text-lg font-black text-slate-900 dark:text-white capitalize leading-tight">{service}</h2>
+                          </div>
+                          
+                          <p className="text-slate-600 dark:text-slate-300 text-sm font-semibold mb-3 flex items-center gap-2 capitalize">
+                             {name}
+                             {provider.verificationStatus === 'approved' && (
+                               <span className="material-symbols-outlined text-indigo-600 text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                             )}
+                             <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                             <span className="flex items-center text-amber-500 text-xs font-black gap-0.5">
+                               <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                               {provider.rating ? Number(provider.rating).toFixed(1) : 'New'}
+                             </span>
+                             <span className="text-slate-400 text-xs font-medium">({provider.reviewsCount || 0} Reviews)</span>
+                             <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                             <span className="text-slate-600 dark:text-slate-400 text-xs font-medium">{provider.experience || 0}+ Years</span>
+                          </p>
+
+                          <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2 leading-relaxed pr-4">
+                            Professional {categoryName(provider)} service by {name}. Experienced in all types of {service.toLowerCase()} solutions. Fast, reliable, and affordable services tailored for your home.
+                          </p>
+                        </div>
+                        
+                        {/* Features Badges */}
+                        <div className="flex flex-wrap gap-4 mt-4">
+                           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                             <span className="material-symbols-outlined text-[16px]">eco</span>
+                             Eco Friendly
+                           </div>
+                           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                             <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                             Background Verified
+                           </div>
+                           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                             <span className="material-symbols-outlined text-[16px]">alarm_on</span>
+                             On-time Service
+                           </div>
+                           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                             <span className="material-symbols-outlined text-[16px]">near_me</span>
+                             {distance}
+                           </div>
+                        </div>
+                      </div>
+
+                      {/* Pricing Column */}
+                      <div className="w-full md:w-[160px] shrink-0 md:border-l border-slate-100 dark:border-slate-800 md:pl-6 flex flex-col justify-center py-1 border-t md:border-t-0 pt-4 md:pt-0 mt-2 md:mt-0">
+                         <div className="text-left md:text-right md:mb-4">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Starting from</p>
+                           <p className="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1.5">{formatRate(provider.hourlyRate || 0)}</p>
+                           <p className="text-[10px] text-slate-500 font-medium mt-1">Per Session</p>
+                         </div>
+                         
+                         <div className="mt-3 md:mt-0">
+                           <Link to={`/provider-details?id=${provider._id}`} className="block w-full py-2.5 text-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm transition-all text-sm">
+                             Book Now
+                           </Link>
+                           <p className="text-[10px] text-slate-400 font-medium mt-2 text-center">
+                             Usually responds in {eta || '15 mins'}
+                           </p>
+                         </div>
+                      </div>
+
+                    </div>
+                  );
+                })}
               </div>
             )}
-          </>
-        )}
-      </section>
-    </main>
+
+            {/* Pagination Footer */}
+            {!loading && !error && providers.length > 0 && (
+              <div className="mt-6 flex flex-col md:flex-row items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-5">
+                <p className="text-xs text-slate-500 font-medium mb-4 md:mb-0">
+                  Showing {(pagination.page - 1) * 9 + 1} to {Math.min(pagination.page * 9, pagination.total)} of {pagination.total} services
+                </p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page === 1} className="w-7 h-7 flex items-center justify-center rounded border border-transparent text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors">
+                    <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                  </button>
+                  <button className="w-7 h-7 flex items-center justify-center rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+                    {pagination.page}
+                  </button>
+                  {pagination.pages > pagination.page && (
+                     <button onClick={() => handlePageChange(pagination.page + 1)} className="w-7 h-7 flex items-center justify-center rounded border border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-medium">
+                       {pagination.page + 1}
+                     </button>
+                  )}
+                  {pagination.pages > pagination.page + 1 && (
+                     <span className="px-1 text-slate-400 text-xs">...</span>
+                  )}
+                  {pagination.pages > pagination.page + 1 && (
+                     <button onClick={() => handlePageChange(pagination.pages)} className="w-7 h-7 flex items-center justify-center rounded border border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-medium">
+                       {pagination.pages}
+                     </button>
+                  )}
+                  <button onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page === pagination.pages} className="w-7 h-7 flex items-center justify-center rounded border border-transparent text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors">
+                    <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+            )}
+            
+          </section>
+        </div>
+      </main>
+    </div>
   );
 }

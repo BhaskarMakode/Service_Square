@@ -171,20 +171,7 @@ export default function ProviderOnboardingStep3() {
 
   return (
     <>
-      {/* TopNavBar */}
-      <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm dark:shadow-none font-sans antialiased text-slate-900 dark:text-slate-100">
-        <div className="flex justify-between items-center h-16 px-6 max-w-7xl mx-auto">
-          <div className="text-xl font-black tracking-tight text-indigo-700 dark:text-indigo-400">Service Square</div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors active:scale-95 duration-200 text-slate-500 dark:text-slate-400">
-              <span className="material-symbols-outlined">help</span>
-            </button>
-            <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors active:scale-95 duration-200 text-slate-500 dark:text-slate-400">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-        </div>
-      </nav>
+
 
       <main className="max-w-5xl mx-auto px-6 py-12 md:py-20">
         {/* Progress Indicator Section */}
